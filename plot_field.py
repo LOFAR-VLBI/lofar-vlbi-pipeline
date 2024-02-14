@@ -679,7 +679,7 @@ def generate_catalogues( RATar, DECTar, targRA = 0.0, targDEC = 0.0, lotss_radiu
     if len(lbcs_catalogue) == 0:
         logging.error('LBCS coverage does not exist, and catalogue not found on disk.')
         return
-    if len(lotss_catalogue) == 0 and not fail_lotss_ok:
+    if len(lotss_catalogue) == 0 and not continue_no_lotss:
         logging.error('LoTSS coverage does not exist, and contine_without_lotss is set to False.')
         return 
     
@@ -702,7 +702,7 @@ def generate_catalogues( RATar, DECTar, targRA = 0.0, targDEC = 0.0, lotss_radiu
         lbcs_catalogue.add_column( seps )
 
         ## rename the source_id column
-        #lbcs_catalogue.rename_column('Observation','Source_id')
+        lbcs_catalogue.rename_column('Observation','Source_id')
 
         ## add in some dummy data
         Total_flux = Column( np.ones(len(lbcs_catalogue))*1e3, name='Total_flux', unit='mJy' )
