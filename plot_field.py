@@ -536,15 +536,17 @@ def convert_vlass_fits(fitsfile):
     from matplotlib.colors import LogNorm
     from astropy.visualization import PercentileInterval, imshow_norm
     from astropy.wcs import WCS
+    print("Processing %s"%fitsfile)
     header = fits.open(fitsfile)[0].header
-    wcs = WCS(header)
+    wcs = WCS(header).celestial # Ignore frequency/stokes axis
+
 
     image_data = fits.getdata(fitsfile)
 
     # Shape is (1,1, 3722, 3722). Plot the first image
     interval = PercentileInterval(99.9)
     process_data = interval(image_data)
-    plt.subplot(projection = wcs, slices=('x','y',0,0))
+    plt.subplot(projection = wcs)
     imshow_norm(process_data, cmap='gray')
 
     
