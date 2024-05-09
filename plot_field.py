@@ -549,6 +549,10 @@ def convert_vlass_fits(fitsfile):
     plt.subplot(projection = wcs)
     imshow_norm(process_data, cmap='gray')
 
+
+    # Axis Labels
+    plt.xlabel('RA')
+    plt.ylabel('Dec')
     
     plt.savefig(fitsfile[:-5] + ".png")
 
@@ -663,7 +667,11 @@ def generate_catalogues( RATar, DECTar, targRA = 0.0, targDEC = 0.0, lotss_radiu
     ## first check for a valid delay_calibrator file
     if os.path.isfile(delay_cals_file):
         print( 'Delay calibrators file {:s} exists! returning.'.format(delay_cals_file) )
-        return
+        choice = input("Would you like to overwrite catalogues? Press y to cotinue, n to exit: ")
+        if choice == 'y':
+            pass
+        else:  
+            return
 
     ## look for or download LBCS
     print("Attempting to find or download LBCS catalogue.")
@@ -746,17 +754,14 @@ def generate_catalogues( RATar, DECTar, targRA = 0.0, targDEC = 0.0, lotss_radiu
 
             ## Write catalogues
             ## 1 - delay calibrators -- from lbcs_catalogue
-            result.write( delay_cals_file, format='csv' )
+            result.write( delay_cals_file, format='csv', overwrite = True )
             print('Writing delay calibrator candidate file {:s}'.format(delay_cals_file))
 
-            ## sources to image -- first remove things that are already in the delay_cals_file
-            good_index = [ x for x, src_id in enumerate( lotss_catalogue['Source_id'] ) if src_id not in result['Source_id'] ]
-        
-            tmp_cat = lotss_catalogue[good_index]
+
 
             ## make a flux cut
-            image_index = np.where( tmp_cat['Peak_flux'] >= image_limit_Jy*1e3 )[0]
-            flux_cut_sources = tmp_cat[image_index]
+            image_index = np.where( lotss_catalogue['Peak_flux'] >= image_limit_Jy*1e3 )[0]
+            flux_cut_sources = lotss_catalogue[image_index]
 
             ## make a radius cut
             src_coords = SkyCoord( flux_cut_sources['RA'], flux_cut_sources['DEC'], frame='icrs', unit='deg' )
@@ -769,7 +774,7 @@ def generate_catalogues( RATar, DECTar, targRA = 0.0, targDEC = 0.0, lotss_radiu
             nsrcs = float( len( sources_to_image ) )
             print( "There are "+str(len(lbcs_catalogue))+" delay calibrators within " + str(im_radius) + " degrees of the pointing centre")
             print( "There are "+str(nsrcs)+" sources above "+str(image_limit_Jy*1000)+" mJy within "+str(im_radius)+" degrees of the phase centre.")
-            sources_to_image.write( lotss_result_file, format='csv' )
+            sources_to_image.write( lotss_result_file, format='csv', overwrite = True )
 
     print("Assumed averaging - nchannels: %s; time averaging: %s"%(nchan, av_time))
     make_plot(RATar, DECTar,  lotss_result_file, extreme_catalogue, result, targRA, targDEC,nchan = nchan, av_time = av_time, outdir=outdir)
