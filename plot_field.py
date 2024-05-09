@@ -564,6 +564,14 @@ def make_html(RATar, DECTar,  lotss_result_file,
     import plotly.graph_objects as go
 #    import pandas as pd
     from dash.exceptions import PreventUpdate
+    import base64
+
+    # Copy all images to an assets folder
+    if os.path.exists('assets'):
+        pass 
+    else:
+        os.mkdir('assets')
+        os.system('cp *.png assets')
 
     # Small molcule drugbank dataset
     # Source: https://raw.githubusercontent.com/plotly/dash-sample-apps/main/apps/dash-drug-discovery/data/small_molecule_drugbank.csv'
@@ -584,7 +592,7 @@ def make_html(RATar, DECTar,  lotss_result_file,
             marker=dict(
                 colorscale='viridis',
                 color=df["Total_flux"],
-                size=df["Total_flux"],
+                size=20,
                 colorbar={"title": "Total<br>Flux[mJy]"},
                 line={"color": "#444"},
                 reversescale=True,
@@ -596,46 +604,123 @@ def make_html(RATar, DECTar,  lotss_result_file,
         )
     ])
 
+    # Add image_catalogue scatter
+    # On click, display catalogue info above the plot
+    df_lotss = Table.read(lotss_result_file, format='csv')
+
+    # Remove sources close to the sources in df 
+    for i in range(len(df)):
+        idx = np.where(angular_distance(df['RA'][i], df['DEC'][i], df_lotss['RA'], df_lotss['DEC']) < 0.001)[0]
+        df_lotss.remove_rows(idx)
+
+
+    fig.add_trace(go.Scatter(
+        x=df_lotss["RA"],
+        y=df_lotss["DEC"],
+        mode="markers",
+        customdata = df_lotss['Source_id'],
+        marker=dict(
+            color='red',
+            sizeref = 0.4,
+            opacity = 0.4,
+            size=df_lotss["Total_flux"]/100,
+            line=dict(
+                color='black',
+                width=2
+            ),
+        ),
+        hoverinfo="text",
+
+
+    ))
+
+    # Add large circle indicating 1.5 degree field of view
+    fig.add_shape(
+        type="circle",
+        xref="x",
+        yref="y",
+        x0=RATar-1.5,
+        y0=DECTar-1.5,
+        x1=RATar+1.5,
+        y1=DECTar+1.5,
+        line=dict(
+            color="yellow",
+        ),
+    )
+
     # turn off native plotly.js hover effects - make sure to use
     # hoverinfo="none" rather than "skip" which also halts events.
     #fig.update_traces(hoverinfo="none", hovertemplate=None)
+    # Square aspect ratio
 
     fig.update_layout(
         xaxis=dict(title='RA'),
         yaxis=dict(title='DEC'),
-        plot_bgcolor='rgba(255,255,255,0.1)'
+        plot_bgcolor='rgba(255,255,255,0.1)',
+        showlegend=False,
+        height=800,
+        width=800
+
     )
 
     # Update layout and update traces
     fig.update_layout(clickmode='event+select')
-    fig.update_traces(marker_size=20)
+    #fig.update_traces(marker_size=20)
+    
+    # When any marker selected, display source information from catalogue
+
+
 
     app = Dash(__name__)
 
 
-    # Create app layout to show dash graph
+
+    # Add image of source to the layout
     app.layout = html.Div(
-    [
-        dcc.Graph(
-            id="graph_interaction",
-            figure=fig,
-        ),
-        html.Img(id='image', src='')
-    ]
+        [
+            dcc.Graph(
+                id="graph_interaction",
+                figure=fig,
+            ),
+            html.Div(id="output"),
+        ]
     )
 
-    # html callback function to hover the data on specific coordinates
     @app.callback(
-    Output('image', 'src'),
-    Input('graph_interaction', 'hoverData'))
-    def open_url(hoverData):
-        if hoverData:
-            print(hoverData["points"][0])
-            obs_id = hoverData["points"][0]["customdata"]
-            img_str = "data:./" + obs_id + "_vlass.png;base64"
-            return img_str
-        else:
+        Output("output", "children"),
+        [Input("graph_interaction", "clickData")],
+    )
+    def display_click_data(clickData):
+        if clickData is None:
             raise PreventUpdate
+        else:
+            source_id = clickData["points"][0]["customdata"]
+            if source_id[0] == "L":
+                source = df[df["Observation"] == source_id]
+                return html.Div(
+                    [
+                        html.Img(
+                            src=app.get_asset_url("./" + source_id + "_vlass.png"),
+                            style={"height": "400px", "width": "400px"},
+                        ),
+                        html.H2(f"{source['Observation']}"),
+                        html.P(f"{source['Total_flux']} mJy"),
+                        html.P(f"{source['RA']}"),
+                        html.P(f"{source['DEC']}"),
+                    ]
+                )
+            else:
+                source = df_lotss[df_lotss["Source_id"] == source_id]
+                return html.Div(
+                    [
+                        html.H2(f"{source['Source_id']}"),
+                        html.P(f"{source['Total_flux']} mJy"),
+                        html.P(f"{source['RA']}"),
+                        html.P(f"{source['DEC']}"),
+                    ]
+                )
+
+        
         
     return app
     
@@ -789,6 +874,8 @@ def generate_catalogues( RATar, DECTar, targRA = 0.0, targDEC = 0.0, lotss_radiu
             ra, dec = source['RA'], source['DEC']
             c = SkyCoord(ra, dec, unit = (u.deg, u.deg))
             outfile = os.path.join(outdir,"%s_vlass.fits"%source['Observation'])
+            if os.path.exists(outfile):
+                continue
             try:
                 search_vlass(c, crop = True, crop_scale = 256)
                 os.system("mv vlass_post**.fits  %s"%outfile)
