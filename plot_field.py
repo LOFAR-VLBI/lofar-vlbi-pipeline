@@ -556,15 +556,45 @@ def convert_vlass_fits(fitsfile):
     
     plt.savefig(fitsfile[:-5] + ".png")
 
+def convert_cutout(fitsfile):
+    import matplotlib.pyplot as plt
+    from astropy.visualization import PercentileInterval, imshow_norm
+    from astropy.wcs import WCS
+    print("Processing %s"%fitsfile)
+    header = fits.open(fitsfile)[0].header
+    wcs = WCS(header).celestial # Ignore frequency/stokes axis
+
+
+    image_data = fits.getdata(fitsfile)
+
+    # Shape is (1,1, 3722, 3722). Plot the first image
+    interval = PercentileInterval(99.9)
+    process_data = interval(image_data)
+    plt.subplot(projection = wcs)
+    imshow_norm(process_data, cmap='Blues')
+
+    # Remove all axes
+    plt.axis('off')
+
+    
+    plt.savefig("assets/cutout.png", bbox_inches='tight', pad_inches=0)
+
 def make_html(RATar, DECTar,  lotss_result_file, 
               extreme_catalogue, result, targRA, 
-              targDEC,nchan, av_time):
+              targDEC,nchan, av_time, pointing):
     
-    from dash import Dash, dcc, html, Input, Output, no_update
-    import plotly.graph_objects as go
-#    import pandas as pd
-    from dash.exceptions import PreventUpdate
-    import base64
+    # Check if required packages are installed
+    try:
+        from dash import Dash, dcc, html, Input, Output, no_update
+        import plotly.graph_objects as go
+        from dash.exceptions import PreventUpdate
+        import base64
+    except ImportError:
+        # If not, inform user of commands to install
+        print("Please install the following packages to run this function:")
+        print("dash, plotly, pandas")
+        print("You can install them by running the following command:")
+        print("pip install dash plotly pandas")
 
     # Copy all images to an assets folder
     if os.path.exists('assets'):
@@ -648,6 +678,10 @@ def make_html(RATar, DECTar,  lotss_result_file,
         ),
     )
 
+
+    
+    
+
     # turn off native plotly.js hover effects - make sure to use
     # hoverinfo="none" rather than "skip" which also halts events.
     #fig.update_traces(hoverinfo="none", hovertemplate=None)
@@ -665,9 +699,7 @@ def make_html(RATar, DECTar,  lotss_result_file,
 
     # Update layout and update traces
     fig.update_layout(clickmode='event+select')
-    #fig.update_traces(marker_size=20)
-    
-    # When any marker selected, display source information from catalogue
+
 
 
 
@@ -676,12 +708,14 @@ def make_html(RATar, DECTar,  lotss_result_file,
 
 
     # Add image of source to the layout
+    # Add button which will display cutout on click
     app.layout = html.Div(
         [
             dcc.Graph(
                 id="graph_interaction",
                 figure=fig,
             ),
+            html.Button("Display Cutout", id="cutout_button", n_clicks=0),
             html.Div(id="output"),
         ]
     )
@@ -720,6 +754,49 @@ def make_html(RATar, DECTar,  lotss_result_file,
                     ]
                 )
 
+
+    @app.callback(
+        Output("graph_interaction", "figure", allow_duplicate=True),
+        Input("cutout_button", "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def display_cutout(n_clicks):
+        if n_clicks % 2 == 0:
+            # Remove image layer from the graph
+            fig.layout.images = []
+            return fig
+        else:
+            if os.path.exists("assets/cutout.png"):
+                pass 
+            else:
+                # Convert RA and DEC to equatorial 
+                cutout = f"https://lofar-surveys.org/public/DR2/mosaics/{pointing}/low-mosaic-blanked.fits"
+                # Make request to get cutout. Direct file to assets folder
+                response = requests.get(cutout)
+                with open("assets/cutout.fits", "wb") as f:
+                    f.write(response.content)
+
+                convert_cutout("assets/cutout.fits")
+            
+
+            # Add to background of the graph. It should cover the entire graph
+            fig.add_layout_image(
+                dict(
+                    source="assets/cutout.png",
+                    xref="x",
+                    yref="y",
+                    x = RATar - 1.5,
+                    y = DECTar + 1.5,
+                    sizex=3,
+                    sizey=3,
+
+                    sizing = "stretch",
+                    layer = "below",
+                )
+            )
+        return fig
+
+
         
         
     return app
@@ -728,7 +805,7 @@ def make_html(RATar, DECTar,  lotss_result_file,
 def generate_catalogues( RATar, DECTar, targRA = 0.0, targDEC = 0.0, lotss_radius=1.5, lbcs_radius=1.5, im_radius=1.24,
                bright_limit_Jy=5., lotss_catalogue='lotss_catalogue.csv', lbcs_catalogue='lbcs_catalogue.csv', lotss_result_file='image_catalogue.csv',
                delay_cals_file='delay_calibrators.csv', match_tolerance=5., image_limit_Jy=0.01, continue_no_lotss=False,
-                nchan = 16,  av_time = 1., vlass=False, html=False, outdir='.'):
+                nchan = 16,  av_time = 1., vlass=False, html=False, outdir='.', pointing = None):
 
 #def plugin_main( RA, DEC, **kwargs ):
 #    im_radius = float(kwargs['im_radius'])
@@ -884,7 +961,9 @@ def generate_catalogues( RATar, DECTar, targRA = 0.0, targDEC = 0.0, lotss_radiu
                 pass
 
     if html:
-        app = make_html(RATar, DECTar,  lotss_result_file, extreme_catalogue, result, targRA, targDEC,nchan = nchan, av_time = av_time)
+        app = make_html(RATar, DECTar,  lotss_result_file, extreme_catalogue, 
+                        result, targRA, targDEC,nchan = nchan, av_time = av_time, 
+                        pointing = pointing)
         app.run_server(debug=True, use_reloader=False)
     #return
 
@@ -917,6 +996,7 @@ if __name__ == "__main__":
 
     parser.add_argument( '--RA', type=float, dest = 'RA', help='Ptg RA in deg' )
     parser.add_argument( '--DEC', type=float, dest = 'DEC', help='Ptg DEC in deg' )
+    parser.add_argument( '--pointing', type=str, dest='pointing', help='Pointing name')
 
 
     args = parser.parse_args()
@@ -933,7 +1013,8 @@ if __name__ == "__main__":
            lbcs_catalogue=args.lbcs_catalogue, lotss_result_file=args.lotss_result_file, 
            delay_cals_file=args.delay_cals_file, match_tolerance=args.match_tolerance, 
            image_limit_Jy=args.image_limit_Jy, continue_no_lotss = args.continue_no_lotss,
-            nchan = args.nchan,  av_time = args.av_time, vlass=args.vlass, html = args.html, outdir=args.outdir)
+            nchan = args.nchan,  av_time = args.av_time, vlass=args.vlass, html = args.html, outdir=args.outdir, 
+            pointing = args.pointing)
 
 
 
