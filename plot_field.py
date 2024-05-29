@@ -139,7 +139,7 @@ def my_lotss_catalogue( RATar, DECTar,  Radius=1.5, bright_limit_Jy=5., faint_li
         url = 'https://vo.astron.nl/lotss_dr2/q/src_cone/scs.xml'
 
         ## query the database
-        query = vo.dal.scs.SCSQuery( url )
+        query = vo.dal.scs.SCSQuery( url, maxrec=10000000 )
         query['RA'] = float( RATar )
         query['DEC'] = float( DECTar )
         query.radius = float( Radius )
