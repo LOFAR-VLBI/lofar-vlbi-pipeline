@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import os, sys, logging, io
 import numpy as np
 import pyvo as vo
@@ -750,20 +751,20 @@ def make_html(RATar, DECTar,  lotss_result_file,
                             src=app.get_asset_url("./" + source_id + "_vlass.png"),
                             style={"height": "400px", "width": "400px"},
                         ),
-                        html.H2(f"{source['Observation']}"),
-                        html.P(f"{source['Total_flux']} mJy"),
-                        html.P(f"{source['RA']}"),
-                        html.P(f"{source['DEC']}"),
+                        html.H2(str(source['Observation'])),
+                        html.P("%f mJy" % source['Total_flux']),
+                        html.P(str(source['RA'])),
+                        html.P(str(source['DEC'])),
                     ]
                 )
             else:
                 source = df_lotss[df_lotss["Source_id"] == source_id]
                 return html.Div(
                     [
-                        html.H2(f"{source['Source_id']}"),
-                        html.P(f"{source['Total_flux']} mJy"),
-                        html.P(f"{source['RA']}"),
-                        html.P(f"{source['DEC']}"),
+                        html.H2(str(source['Source_id'])),
+                        html.P("%f mJy" % source['Total_flux']),
+                        html.P(str(source['RA'])),
+                        html.P(str(source['DEC'])),
                     ]
                 )
 
@@ -783,7 +784,7 @@ def make_html(RATar, DECTar,  lotss_result_file,
                 pass 
             else:
                 # Convert RA and DEC to equatorial 
-                cutout = f"https://lofar-surveys.org/public/DR2/mosaics/{pointing}/low-mosaic-blanked.fits"
+                cutout = "https://lofar-surveys.org/public/DR2/mosaics/"+pointing+"/low-mosaic-blanked.fits"
                 # Make request to get cutout. Direct file to assets folder
                 response = requests.get(cutout)
                 with open("assets/cutout.fits", "wb") as f:
