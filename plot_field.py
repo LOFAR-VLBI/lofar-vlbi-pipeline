@@ -3,7 +3,6 @@ from __future__ import print_function
 import os, sys, logging, io
 import numpy as np
 import pyvo as vo
-import casacore.tables as pt
 from astropy.table import Table, Column, vstack, unique, hstack
 import argparse
 #from lofarpipe.support.data_map import DataMap
@@ -73,7 +72,7 @@ def grab_coo_MS(MS):
     RA, Dec : float,float
         coordinates of the field (RA, Dec in deg , J2000)
     """
-
+    import casacore.tables as pt
     # reading the coordinates ("position") from the MS
     # NB: they are given in rad,rad (J2000) 
     [[[ra,dec]]] = pt.table(MS+'/FIELD', readonly=True, ack=False).getcol('PHASE_DIR')
