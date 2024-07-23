@@ -107,7 +107,7 @@ def input2strlist_nomapfile(invar):
         raise TypeError('input2strlist: Type '+str(type(invar))+' unknown!')
     return str_list
 
-def my_lotss_catalogue( RATar, DECTar,  Radius=1.5, bright_limit_Jy=5., faint_limit_Jy = 0.0, outfile='' ):
+def my_lotss_catalogue( RATar, DECTar,  Radius=1.5, bright_limit_Jy=5., faint_limit_Jy = 0.0, outfile='', use_vo=False ):
 
     """
     Download the LoTSS skymodel for the target field
@@ -128,29 +128,40 @@ def my_lotss_catalogue( RATar, DECTar,  Radius=1.5, bright_limit_Jy=5., faint_li
             tb_final.write( outfile, format='csv' )
     else:
         print("DOWNLOADING LOTSS Skymodel for the target field")
-
+        print('Radius is',Radius)
         # Reading a MS to find the coordinate (pyrap)
         #RATar, DECTar = grab_coo_MS(input2strlist_nomapfile(ms_input)[0])
 
-    ## this is the tier 1 database to query
-        #url = 'http://vo.astron.nl/lofartier1/q/cone/scs.xml'
-        # HETDEX database.
-        #url = 'https://vo.astron.nl/hetdex/lotss-dr1/cone/scs.xml'
-        url = 'https://vo.astron.nl/lotss_dr2/q/src_cone/scs.xml'
+        if use_vo:
+        
+            ## this is the tier 1 database to query
+            #url = 'http://vo.astron.nl/lofartier1/q/cone/scs.xml'
+            # HETDEX database.
+            #url = 'https://vo.astron.nl/hetdex/lotss-dr1/cone/scs.xml'
+            url = 'https://vo.astron.nl/lotss_dr2/q/src_cone/scs.xml'
 
-        ## query the database
-        query = vo.dal.scs.SCSQuery( url, maxrec=10000000 )
-        query['RA'] = float( RATar )
-        query['DEC'] = float( DECTar )
-        query.radius = float( Radius )
-        t = query.execute()
+            ## query the database
+            query = vo.dal.scs.SCSQuery( url, maxrec=10000000 )
+            query['RA'] = float( RATar )
+            query['DEC'] = float( DECTar )
+            query.radius = float( Radius )
+            t = query.execute()
 
-        ## convert to VO table
-        try:
-            tb = t.votable.to_table()
-        except AttributeError:
-            # Above statement didn't work, try the alternative.
-            tb = t.to_table()
+            ## convert to VO table
+            try:
+                tb = t.votable.to_table()
+            except AttributeError:
+                # Above statement didn't work, try the alternative.
+                tb = t.to_table()
+        else:
+            # To get the combined source catalogue, query the surveys server
+            print('Using the lofar-surveys catalogue!')
+            r=requests.get('https://lofar-surveys.org/catalogue_search.csv?ra=%f&dec=%f&radius=%f' % (RATar,DECTar,Radius))
+            tb=Table.read(r.text.split('\n'),format='csv')
+            print('Got a table with',len(tb),'entries')
+            tb['Maj'].name='Majax'
+            tb['Min'].name='Minax'
+                
         flux_sort = tb.argsort('Total_flux')
         tb_sorted = tb[flux_sort[::-1]]
         ## and keep only some of the columns
@@ -165,6 +176,8 @@ def my_lotss_catalogue( RATar, DECTar,  Radius=1.5, bright_limit_Jy=5., faint_li
         keep_cols = ['Source_id', 'RA', 'DEC','Total_flux','Peak_flux', 'Majax', 'Minax', 'PA', 'DC_Maj', 'DC_Min', 'DC_PA', 'Isl_rms', 'Resolved']
         if 'LGZ_Size' in colnames:
             keep_cols = keep_cols + ['LGZ_Size', 'LGZ_Width', 'LGZ_PA']
+        if 'LAS' in colnames:
+            keep_cols = keep_cols + ['LAS']
 
         tb_final = tb_sorted[keep_cols]
 
