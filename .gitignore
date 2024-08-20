@@ -2,3 +2,5 @@
 *.pyc
 docs/_*
 docs/build
+*.csv
+output.png

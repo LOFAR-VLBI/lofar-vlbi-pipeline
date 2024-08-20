@@ -837,13 +837,19 @@ def generate_catalogues( RATar, DECTar, targRA = 0.0, targDEC = 0.0, lotss_radiu
     lbcs_catalogue = os.path.join(outdir,lbcs_catalogue)
     lotss_result_file = os.path.join(outdir,lotss_result_file)
     delay_cals_file=os.path.join(outdir,delay_cals_file)
+    extreme_file = os.path.join(outdir,"extreme_catalogue.csv")
 
  
     ## first check for a valid delay_calibrator file
     if os.path.isfile(delay_cals_file):
         print( 'Delay calibrators file {:s} exists! returning.'.format(delay_cals_file) )
-        choice = input("Would you like to overwrite catalogues? Press y to cotinue, n to exit: ")
+        choice = input("Would you like to overwrite catalogues? Press y to cotinue and overwrite, n to exit: ")
         if choice == 'y':
+            os.remove(delay_cals_file)
+            os.remove(lotss_catalogue)
+            os.remove(lbcs_catalogue)
+            os.remove(lotss_result_file)
+            os.remove(extreme_file)
             pass
         else:  
             return
@@ -854,10 +860,10 @@ def generate_catalogues( RATar, DECTar, targRA = 0.0, targDEC = 0.0, lotss_radiu
     ## look for or download LoTSS
     print("Attempting to find or download LoTSS catalogue.")
     lotss_catalogue = my_lotss_catalogue( RATar, DECTar,Radius=lotss_radius, bright_limit_Jy=bright_limit_Jy, faint_limit_Jy = 0.0,
-                                         outfile=lotss_catalogue )
+                                         outfile=lotss_catalogue, use_vo=True)
     
     print("Finding bright sources outside field")
-    extreme_catalogue = my_lotss_catalogue( RATar, DECTar,Radius=10.0, bright_limit_Jy=1000., faint_limit_Jy = 10.0, outfile = os.path.join(outdir,"extreme_catalogue.csv") )
+    extreme_catalogue = my_lotss_catalogue( RATar, DECTar,Radius=5.0, bright_limit_Jy=1000., faint_limit_Jy = 10.0, outfile = os.path.join(outdir,"extreme_catalogue.csv") )
     extreme_catalogue = remove_multiples_position(extreme_catalogue)
     ## if lbcs exists, and either lotss exists or continue_without_lotss = True, continue
     ## else provide an error message and stop
@@ -1036,15 +1042,5 @@ if __name__ == "__main__":
 
 ### TO DO LIST
 
-# Change size of targets based on flux - Add argument for setting minimum flux - DONE
-# Look for bright sources within 10 degrees above a few Jy - use the bright_limit_Jy argument - DONE
 # Add colour for quality of LBCS sources - Use fit or the compactness codes - Maybe not 
-# Number the calibrators based on brightness - DONE
 
-
-# Label shading of the smearing - DONE
-# Print some statistics about the sources - Number etc. - DONE
-# How many sources above the flux limit - DONE
-# Target to phase center distance - DONE
-# Make all the grey's lighter - DONE
-# Print what averaging was assumed - Also add as an optional argument - Both channels and time - DONE
