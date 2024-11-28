@@ -60,6 +60,10 @@ def count_x(n):
     norm = float(s)/float(c)
     return(norm)
 
+def calculate_gval(goodness):
+    '''Calculate gval for delay calibrator ranking from goodness string'''
+    return sum([int(score) for score in goodness if score != "-"]) / len(goodness.replace("-",""))
+
 def grab_coo_MS(MS):
     """
     Read the coordinates of a field from one MS corresponding to the selection given in the parameters
@@ -851,7 +855,8 @@ def generate_catalogues( RATar, DECTar, targRA = 0.0, targDEC = 0.0, lotss_radiu
             os.remove(lotss_result_file)
             os.remove(extreme_file)
             pass
-        else:  
+        else: 
+            print("Exiting to avoid overwriting catalogues") 
             return
 
     ## look for or download LBCS
@@ -904,8 +909,20 @@ def generate_catalogues( RATar, DECTar, targRA = 0.0, targDEC = 0.0, lotss_radiu
         ## remove duplicate sources if necessary 
         lbcs_catalogue = remove_multiples_position( lbcs_catalogue )
 
+        # Calculate the new score r/F
+        goodness = [str(score) for score in result['FT_Goodness']]
+        print(goodness)
+        g = [calculate_gval(calibrator) for calibrator in goodness]
+        gscore = result["Radius"].value[0] / g
+        gscore_column = Column( gscore, name='gscore')
+        result.add_column(gscore_column)
+
         ## order based on radius from the phase centre
-        lbcs_catalogue.sort('Radius')
+        result.sort('gscore', )
+
+
+        ## order based on radius from the phase centre
+        lbcs_catalogue.sort('gscore')
 
         ## write the catalogue
         lbcs_catalogue.write(delay_cals_file, format='csv')
@@ -928,8 +945,16 @@ def generate_catalogues( RATar, DECTar, targRA = 0.0, targDEC = 0.0, lotss_radiu
             seps = Column( separations.deg, name='Radius' )
             result.add_column( seps )
 
-            ## order by radius from the phase centre
-            result.sort( 'Radius' )
+            # Calculate the new score r/F
+            goodness = [str(score) for score in result['FT_Goodness']]
+            print(goodness)
+            g = [calculate_gval(calibrator) for calibrator in goodness]
+            gscore = result["Radius"].value[0] / g
+            gscore_column = Column( gscore, name='gscore')
+            result.add_column(gscore_column)
+
+            ## order based on radius from the phase centre
+            result.sort('gscore', )
 
             #result.rename_column('Observation','Source_id')
 
