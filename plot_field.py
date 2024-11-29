@@ -60,6 +60,10 @@ def count_x(n):
     norm = float(s)/float(c)
     return(norm)
 
+def calculate_gval(goodness):
+    '''Calculate gval for Frits' calibrator metric'''
+    return sum([int(score) for score in goodness if score != "-"]) / len(goodness.replace("-",""))
+
 def grab_coo_MS(MS):
     """
     Read the coordinates of a field from one MS corresponding to the selection given in the parameters
@@ -459,7 +463,7 @@ def smallest_distance(RA, DEC, lbcs_catalogue):
 
     ids = np.argmin(distances)
 
-    return ids, distances[ids]
+    return ids, distances
     
     
 def make_plot(RA, DEC,  lotss_catalogue, extreme_catalogue, lbcs_catalogue, targRA=None, 
@@ -526,15 +530,15 @@ def make_plot(RA, DEC,  lotss_catalogue, extreme_catalogue, lbcs_catalogue, targ
     dist_ids, dist = smallest_distance(RA, DEC, lbcs)
 
     closest_calib = lbcs[dist_ids]
-    ax.plot([RA, closest_calib['RA']], [DEC, closest_calib['DEC']], 
-             linestyle = '--', linewidth = 2, transform=ax.get_transform('fk5'), label = "Distance = %.2f degrees"%dist)    
+    ax.plot([RA, lbcs_catalogue[0]['RA']], [DEC, lbcs_catalogue[0]['DEC']], 
+             linestyle = '--', linewidth = 2, transform=ax.get_transform('fk5'), label = "Distance = %.2f degrees"%dist[0])    
 
     if targRA != None:
         ax.scatter(targRA, targDEC, marker= 'x', s = 80, 
          transform=ax.get_transform('fk5'), label = "Target")
-        dist = angular_distance(targRA, targDEC, closest_calib['RA'], closest_calib['DEC'])
+        dist = angular_distance(targRA, targDEC, lbcs_catalogue[0]['RA'], lbcs_catalogue[0]['DEC'])
 
-        ax.plot([targRA, closest_calib['RA']], [targDEC, closest_calib['DEC']], 
+        ax.plot([targRA, lbcs_catalogue[0]['RA']], [targDEC, lbcs_catalogue[0]['DEC']], 
                  linestyle = '--', color = 'black',  linewidth = 2, transform=ax.get_transform('fk5'), label = "Distance = %.2f degrees"%dist)
     
     for i in range(len(lbcs)):
@@ -904,8 +908,22 @@ def generate_catalogues( RATar, DECTar, targRA = 0.0, targDEC = 0.0, lotss_radiu
         ## remove duplicate sources if necessary 
         lbcs_catalogue = remove_multiples_position( lbcs_catalogue )
 
+        ## remove calibrators over 1.2 degrees from pointing centre
+        lbcs_catalogue = lbcs_catalogue[lbcs_catalogue['Radius'] < 1.2]
+
+        # Calculate the new score r/F
+        goodness = [str(score) for score in lbcs_catalogue['FT_Goodness']]
+        print(goodness)
+        g = [calculate_gval(calibrator) for calibrator in goodness]
+        gscore = lbcs_catalogue["Radius"].value / g
+        gscore_column = Column( gscore, name='gscore')
+        lbcs_catalogue.add_column(gscore_column)
+
         ## order based on radius from the phase centre
-        lbcs_catalogue.sort('Radius')
+        lbcs_catalogue.sort('gscore')        
+
+        ## order based on radius from the phase centre
+        #lbcs_catalogue.sort('Radius')
 
         ## write the catalogue
         lbcs_catalogue.write(delay_cals_file, format='csv')
@@ -928,8 +946,19 @@ def generate_catalogues( RATar, DECTar, targRA = 0.0, targDEC = 0.0, lotss_radiu
             seps = Column( separations.deg, name='Radius' )
             result.add_column( seps )
 
-            ## order by radius from the phase centre
-            result.sort( 'Radius' )
+            ## remove calibrators over 1.2 degrees from pointing centre
+            result = result[result['Radius'] < 1.2]
+
+            # Calculate the new score r/F
+            goodness = [str(score) for score in result['FT_Goodness']]
+            print(goodness)
+            g = [calculate_gval(calibrator) for calibrator in goodness]
+            gscore = result["Radius"].value / g
+            gscore_column = Column( gscore, name='gscore')
+            result.add_column(gscore_column)
+
+            ## order based on radius from the phase centre
+            result.sort('gscore')
 
             #result.rename_column('Observation','Source_id')
 
