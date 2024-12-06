@@ -1,7 +1,7 @@
 [project]
 name = "lofar-vlbi-pipeline"
 authors = []
-version = "0.1.0"
+version = "2024.1.0"
 description = "lofar-vlbi-pipeline containing the cli tool plot_field"
 readme = "README.md"
 requires-python = ">=3.13"
