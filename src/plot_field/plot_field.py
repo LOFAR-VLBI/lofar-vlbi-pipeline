@@ -992,7 +992,7 @@ def generate_catalogues( RATar, DECTar, targRA = 0.0, targDEC = 0.0, lotss_radiu
     
     
     if vlass:
-        from vlass_search import search_vlass
+        from .vlass_search import search_vlass
         ## Get cutouts of all LBCS sources
         print("Getting cutouts of LBCS sources")
         for i, source in enumerate(result):
@@ -1005,7 +1005,7 @@ def generate_catalogues( RATar, DECTar, targRA = 0.0, targDEC = 0.0, lotss_radiu
                 search_vlass(c, crop = True, crop_scale = 256)
                 os.system("mv vlass_post**.fits  %s"%outfile)
                 convert_vlass_fits(outfile)
-            except:
+            except Exception:
                 pass
 
     if html:
@@ -1015,11 +1015,7 @@ def generate_catalogues( RATar, DECTar, targRA = 0.0, targDEC = 0.0, lotss_radiu
         app.run_server(debug=True, use_reloader=False)
     #return
 
-
-
-
-if __name__ == "__main__":
-
+def app():
     parser = argparse.ArgumentParser()
     parser.add_argument( '--output_dir', dest='outdir', type=str, help='directory to save results in [default cwd]', default='.' )
     parser.add_argument( '--lotss_radius', dest='lotss_radius', type=float, help='Radius to search LoTSS', default=1.5 )
@@ -1066,6 +1062,10 @@ if __name__ == "__main__":
 
 
 
+if __name__ == "__main__":
+
+    
+    app()
 
 
 

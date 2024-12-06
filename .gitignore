@@ -4,3 +4,10 @@ docs/_*
 docs/build
 *.csv
 output.png
+*cache*
+.venv
+build
+dist
+*egg*
+VLASS*
+assets

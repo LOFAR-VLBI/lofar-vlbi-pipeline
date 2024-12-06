@@ -1,0 +1,36 @@
+[project]
+name = "lofar-vlbi-pipeline"
+authors = []
+version = "0.1.0"
+description = "lofar-vlbi-pipeline containing the cli tool plot_field"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "astropy>=7.0.0",
+    "matplotlib>=3.9.3",
+    "pyvo>=1.6",
+    "requests>=2.32.3",
+    "scipy>=1.14.1",
+]
+license = {file = "LICENSE"}
+keywords = ["radio", "astronomy", "VLBI", "LOFAR"]
+
+[project.urls]
+Repository="https://github.com/LOFAR-VLBI/lofar-vlbi-pipeline"
+
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project.scripts]
+plot_field = "plot_field.plot_field:app"
+
+[tool.uv]
+package = true
+
+[tool.setuptools]
+py-modules = []
