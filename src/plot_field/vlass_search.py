@@ -21,10 +21,8 @@ from astropy.wcs.utils import skycoord_to_pixel
 from astropy.wcs import WCS
 from astropy.nddata import Cutout2D
 
-try:
-    from urllib.request import urlopen
-except ImportError:
-    from urllib2 import urlopen
+
+from urllib.request import urlopen
 
 # Settings to potentially tweak
 summary_file_location = "VLASS_dyn_summary.php"
