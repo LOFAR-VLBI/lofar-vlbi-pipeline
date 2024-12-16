@@ -456,7 +456,9 @@ def smearing_calculation(nchan = 16, obs_freq=144000000, radii=np.arange(0.001,4
 
 
 def angular_distance(RA1, DEC1, RA2, DEC2):
-    return np.sqrt((RA1-RA2)**2 + (DEC1-DEC2)**2)
+    c1 = SkyCoord(RA1, DEC1, unit = 'deg')
+    c2 = SkyCoord(RA2, DEC2, unit = 'deg')
+    return c1.separation(c2).value
 
 def smallest_distance(RA, DEC, lbcs_catalogue):
     distances = [angular_distance(RA, DEC, source['RA'], source['DEC']) for source in lbcs_catalogue]
@@ -470,6 +472,7 @@ def make_plot(RA, DEC,  lotss_catalogue, extreme_catalogue, lbcs_catalogue, targ
           targDEC=None, nchan = 16, av_time = 1, outdir='.'):
     import matplotlib.pyplot as plt
     from matplotlib.patches import Circle
+    from astropy.visualization.wcsaxes import SphericalCircle
 
     mkfits(RA, DEC, 2048, 2.6367)
 
@@ -493,7 +496,8 @@ def make_plot(RA, DEC,  lotss_catalogue, extreme_catalogue, lbcs_catalogue, targ
     fraction = ["80%" , "60%", "40%", "20%"]
     for i,thresh in enumerate(thres_radii):
         color = color + 0.1
-        c = Circle((RA, DEC), thresh, edgecolor=None, facecolor=str(color),
+        centre_coord = SkyCoord(RA, DEC, unit = 'deg')
+        c = SphericalCircle(centre_coord, thresh*u.deg, edgecolor=None, facecolor=str(color),
            transform=ax.get_transform('fk5'), zorder = -1)
         ax.text(RA + 0.98*thresh , DEC, fraction[i], 
               transform=ax.get_transform('fk5'), fontsize = "large")
@@ -521,7 +525,7 @@ def make_plot(RA, DEC,  lotss_catalogue, extreme_catalogue, lbcs_catalogue, targ
     ax.scatter(lbcs['RA'], lbcs['DEC'], transform=ax.get_transform('fk5'), s = 60, label = "LBCS Sources")
     
 
-    c = Circle((RA, DEC), 1.5, edgecolor='yellow', facecolor='none',
+    c = SphericalCircle(centre_coord, 1.5*u.deg, edgecolor='yellow', facecolor='none',
            transform=ax.get_transform('fk5'))
     ax.add_patch(c)
 
@@ -543,7 +547,7 @@ def make_plot(RA, DEC,  lotss_catalogue, extreme_catalogue, lbcs_catalogue, targ
     
     for i in range(len(lbcs)):
         ax.text(lbcs[i]['RA']-0.05, lbcs[i]['DEC'], "%.2f Jy"%(lbcs[i]['Total_flux']/1000),  transform=ax.get_transform('fk5'))
-    plt.legend(fontsize = 'x-large')
+    plt.legend(fontsize = 'x-large', loc = 'upper right')
 
     plt.savefig(os.path.join(outdir,"output.png"))
     os.system('rm temp.fits')
@@ -852,8 +856,11 @@ def generate_catalogues( RATar, DECTar, targRA = 0.0, targDEC = 0.0, lotss_radiu
             os.remove(delay_cals_file)
             os.remove(lotss_catalogue)
             os.remove(lbcs_catalogue)
-            os.remove(lotss_result_file)
-            os.remove(extreme_file)
+            try:
+                os.remove(lotss_result_file)
+                os.remove(extreme_file)
+            except:
+                print("No LoTSS files")
             pass
         else:  
             return

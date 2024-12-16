@@ -4,3 +4,5 @@ docs/_*
 docs/build
 *.csv
 output.png
+src
+*.fits
