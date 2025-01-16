@@ -161,6 +161,9 @@ def my_lotss_catalogue( RATar, DECTar,  Radius=1.5, bright_limit_Jy=5., faint_li
             # To get the combined source catalogue, query the surveys server
             print('Using the lofar-surveys catalogue!')
             r=requests.get('https://lofar-surveys.org/catalogue_search.csv?ra=%f&dec=%f&radius=%f' % (RATar,DECTar,Radius))
+            # Successful HTTP requests return 200.
+            if r.status_code != 200:
+                raise RuntimeError("Unsuccessful HTTP request querying https://lofar-surveys.org/catalogue_search.csv")
             tb=Table.read(r.text.split('\n'),format='csv')
             print('Got a table with',len(tb),'entries')
             tb['Maj'].name='Majax'
