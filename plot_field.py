@@ -166,7 +166,7 @@ def my_lotss_catalogue( RATar, DECTar,  Radius=1.5, bright_limit_Jy=5., faint_li
             retries = Retry(total=3, backoff_factor=10, status_forcelist=[500,502,503,504])
             session.mount("https://", HTTPAdapter(max_retries=retries))
 
-            r = session.get('https://lofar-surveys.org/catalogue_search.csv?ra=%f&dec=%f&radius=%f' % (RATar,DECTar,Radius))
+            r = session.get('https://lofar-surveys.org/catalogue_search.csv?ra=%f&dec=%f&radius=%f' % (RATar,DECTar,Radius), timeout=30)
             # Successful HTTP requests return 200.
             if r.status_code != 200:
                 raise RuntimeError("Unsuccessful HTTP request querying https://lofar-surveys.org/catalogue_search.csv")
