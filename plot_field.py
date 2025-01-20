@@ -13,6 +13,7 @@ from astropy import units as u
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.table import Table
+from requests.adapters import Retry, HTTPAdapter
 from time import sleep
 
 
@@ -160,7 +161,12 @@ def my_lotss_catalogue( RATar, DECTar,  Radius=1.5, bright_limit_Jy=5., faint_li
         else:
             # To get the combined source catalogue, query the surveys server
             print('Using the lofar-surveys catalogue!')
-            r=requests.get('https://lofar-surveys.org/catalogue_search.csv?ra=%f&dec=%f&radius=%f' % (RATar,DECTar,Radius))
+            session = requests.Session()
+            # Will wait for 0, 20, 40 seconds between attempts.
+            retries = Retry(total=3, backoff_factor=10, status_forcelist=[500,502,503,504])
+            session.mount("https://", HTTPAdapter(max_retries=retries))
+
+            r = session.get('https://lofar-surveys.org/catalogue_search.csv?ra=%f&dec=%f&radius=%f' % (RATar,DECTar,Radius))
             # Successful HTTP requests return 200.
             if r.status_code != 200:
                 raise RuntimeError("Unsuccessful HTTP request querying https://lofar-surveys.org/catalogue_search.csv")
