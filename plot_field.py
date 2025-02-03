@@ -15,6 +15,7 @@ from astropy.wcs import WCS
 from astropy.table import Table
 from requests.adapters import Retry, HTTPAdapter
 from time import sleep
+from fit_synchrotron_spectrum import fit_from_NED, fit_from_trusted_surveys
 
 
 def sum_digits(n):
@@ -1005,8 +1006,24 @@ def generate_catalogues( RATar, DECTar, targRA = 0.0, targDEC = 0.0, lotss_radiu
     print("Assumed averaging - nchannels: %s; time averaging: %s"%(nchan, av_time))
     make_plot(RATar, DECTar,  lotss_result_file, extreme_catalogue, result, targRA, targDEC,nchan = nchan, av_time = av_time, outdir=outdir)
 
-    
-    
+    fits = []
+    for source in result:
+        try:
+            fit = fit_from_NED(source['RA'], source['DEC'], 12.0)
+            fits.append(fit)  
+        except ValueError:
+            print("Source could not be fit - ValueError")
+        except TypeError:
+            print("Could not be fit - TypeError")
+
+        try:
+            fit = fit_from_trusted_surveys(source['RA'], source['DEC'], 12.0)
+            fits.append(fit)  
+        except ValueError:
+            print("Source could not be fit - ValueError")
+        except TypeError:
+            print("Could not be fit - TypeError")
+
     if vlass:
         from vlass_search import search_vlass
         ## Get cutouts of all LBCS sources
