@@ -977,6 +977,14 @@ def generate_catalogues( RATar, DECTar, targRA = 0.0, targDEC = 0.0, lotss_radiu
             ## order based on radius from the phase centre
             result.sort('gscore')
 
+            # Empty columns for fitting parameters 
+            total_flux_column = Column([None] * len(result), name='total_flux', unit='mJy')  
+            alpha_1_column = Column([None] * len(result), name='alpha_1')  
+            alpha_2_column = Column([None] * len(result), name='alpha_2')  
+            result.add_column(total_flux_column)
+            result.add_column(alpha_1_column)
+            result.add_column(alpha_2_column)
+
             #result.rename_column('Observation','Source_id')
 
             ## Write catalogues
@@ -1007,9 +1015,10 @@ def generate_catalogues( RATar, DECTar, targRA = 0.0, targDEC = 0.0, lotss_radiu
     make_plot(RATar, DECTar,  lotss_result_file, extreme_catalogue, result, targRA, targDEC,nchan = nchan, av_time = av_time, outdir=outdir)
 
     fits = []
-    for source in result:
+    for i,source in enumerate(result):
         try:
             fit = fit_from_NED(source['RA'], source['DEC'], 12.0)
+            fit_parameters_NED = fit.fit_parameters
             fits.append(fit)  
         except ValueError:
             print("Source could not be fit - ValueError")
@@ -1018,11 +1027,25 @@ def generate_catalogues( RATar, DECTar, targRA = 0.0, targDEC = 0.0, lotss_radiu
 
         try:
             fit = fit_from_trusted_surveys(source['RA'], source['DEC'], 12.0)
-            fits.append(fit)  
+            fits.append(fit)
+            fit_parameters_trusted = fit.fit_parameters
         except ValueError:
             print("Source could not be fit - ValueError")
         except TypeError:
             print("Could not be fit - TypeError")
+
+        if fit_parameters_trusted is not None:
+            fitting_parameters = fit_parameters_trusted
+        elif fit_parameters_NED is not None:
+            fitting_parameters = fit_parameters_NED
+        else:
+            fitting_parameters = [None, None, None, None]
+
+        result['total_flux'][i] = fitting_parameters[0] 
+        result['alpha_1'][i] = fitting_parameters[1]    
+        result['alpha_2'][i] = fitting_parameters[2]    
+        result.write('delay_calibrators.csv', format='csv', overwrite=True)
+
 
     if vlass:
         from vlass_search import search_vlass
@@ -1046,9 +1069,7 @@ def generate_catalogues( RATar, DECTar, targRA = 0.0, targDEC = 0.0, lotss_radiu
                         result, targRA, targDEC,nchan = nchan, av_time = av_time, 
                         pointing = pointing)
         app.run_server(debug=True, use_reloader=False)
-    #return
-
-
+    #return          
 
 
 if __name__ == "__main__":
