@@ -1171,10 +1171,12 @@ def generate_catalogues(
             # Empty columns for fitting parameters 
             total_flux_column = Column([None] * len(result), name='total_flux', unit='mJy')  
             alpha_1_column = Column([None] * len(result), name='alpha_1')  
-            alpha_2_column = Column([None] * len(result), name='alpha_2')  
+            alpha_2_column = Column([None] * len(result), name='alpha_2')
+            survey_column = Column([None] * len(result), name='Catalogue')  
             result.add_column(total_flux_column)
             result.add_column(alpha_1_column)
             result.add_column(alpha_2_column)
+            result.add_column(survey_column)
 
             #result.rename_column('Observation','Source_id')
 
@@ -1258,17 +1260,17 @@ def generate_catalogues(
             print("Could not be fit - TypeError")
 
         if fit_parameters_trusted is not None:
-            fitting_parameters = fit_parameters_trusted
+            fitting_parameters = np.append(fit_parameters_trusted, 'VLSS')
         elif fit_parameters_NED is not None:
-            fitting_parameters = fit_parameters_NED
+            fitting_parameters = np.append(fit_parameters_NED, 'NED')
         else:
             fitting_parameters = [None, None, None, None]
 
         result['total_flux'][i] = fitting_parameters[0] 
         result['alpha_1'][i] = fitting_parameters[1]    
-        result['alpha_2'][i] = fitting_parameters[2]    
+        result['alpha_2'][i] = fitting_parameters[2]
+        result['Catalogue'][i] = fitting_parameters[3] 
         result.write('delay_calibrators.csv', format='csv', overwrite=True)
-
 
     if vlass:
         from vlass_search import search_vlass
