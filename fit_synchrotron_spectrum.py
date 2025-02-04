@@ -20,8 +20,6 @@ plt.rcParams.update(
 )
 
 
-
-
 class Fitter(ABC):
     fit_parameters = None
 
@@ -98,13 +96,11 @@ class MultiFreq:
     fitter: Fitter = LogFitter()
 
     def __init__(self):
-        #To implement
+        # To implement
         pass
 
     def make_plot(self):
         self.fitter.plot(self.freqs, self.flux_density, self.survey_names)
-
-
 
 
 def fit_from_NED(ra: float, dec: float, radius: float):
