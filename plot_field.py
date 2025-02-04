@@ -1242,7 +1242,7 @@ def generate_catalogues(
     fits = []
     for i,source in enumerate(result):
         try:
-            fit = fit_from_NED(source['RA'], source['DEC'], 12.0)
+            fit = fit_from_NED(source['RA'], source['DEC'], 12.0, outdir)
             fit_parameters_NED = fit.fit_parameters
             fits.append(fit)  
         except ValueError:
@@ -1251,7 +1251,7 @@ def generate_catalogues(
             print("Could not be fit - TypeError")
 
         try:
-            fit = fit_from_trusted_surveys(source['RA'], source['DEC'], 12.0)
+            fit = fit_from_trusted_surveys(source['RA'], source['DEC'], 12.0, outdir)
             fits.append(fit)
             fit_parameters_trusted = fit.fit_parameters
         except ValueError:
@@ -1270,7 +1270,7 @@ def generate_catalogues(
         result['alpha_1'][i] = fitting_parameters[1]    
         result['alpha_2'][i] = fitting_parameters[2]
         result['Catalogue'][i] = fitting_parameters[3] 
-        result.write('delay_calibrators.csv', format='csv', overwrite=True)
+        result.write(delay_cals_file, format='csv', overwrite=True)
 
     if vlass:
         from vlass_search import search_vlass

@@ -1,6 +1,7 @@
 import argparse
 from abc import ABC, abstractmethod
 from typing import Any
+import os
 
 import astropy
 import astropy.units as u
@@ -43,6 +44,7 @@ class Fitter(ABC):
         fluxs,
         point_labels: list[str] | None = None,
         file_name: str | None = None,
+        outdir="."
     ):
         freq_smooth = np.linspace(10e6, 10e9, 1000)
         plt.figure(figsize=(8, 8))
@@ -79,9 +81,9 @@ class Fitter(ABC):
         plt.xlim(10e6, 10e9)
         plt.ylim(10e-3, 10)
         if file_name:
-            plt.savefig(f"{file_name}.png", dpi=300, bbox_inches="tight")
+            plt.savefig(os.path.join(outdir,f"{file_name}.png"), dpi=300, bbox_inches="tight")
         else:
-            plt.savefig("spectrum.png", dpi=300, bbox_inches="tight")
+            plt.savefig(os.path.join(outdir,"spectrum.png"), dpi=300, bbox_inches="tight")
 
 
 class LogFitter(Fitter):
@@ -107,7 +109,7 @@ class MultiFreq:
 
 
 
-def fit_from_NED(ra: float, dec: float, radius: float):
+def fit_from_NED(ra: float, dec: float, radius: float, outdir: str):
     obj = Ned.query_region(f"{ra}d {dec}d", radius=radius * u.arcsec)["Object Name"][0]
 
     ned_table = Ned.get_table(obj, table="photometry")
@@ -117,7 +119,7 @@ def fit_from_NED(ra: float, dec: float, radius: float):
 
     fitter = LogFitter()
     fitter.fit(freqs, fluxd_ned, p0=(1.0, -0.8, 0.0))
-    fitter.plot(freqs, fluxd_ned, file_name=f"spectrum_{ra:.3f}_{dec:.3f}_NED")
+    fitter.plot(freqs, fluxd_ned, file_name=f"spectrum_{ra:.3f}_{dec:.3f}_NED", outdir=outdir)
     return fitter
 
 
@@ -143,7 +145,7 @@ def query_vo(
     return t
 
 
-def fit_from_trusted_surveys(ra: float, dec: float, radius: float):
+def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
     frequency = []
     flux_density = []
     survey_name = []
@@ -253,6 +255,7 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float):
         flux_density,
         point_labels=survey_name,
         file_name=f"spectrum_{ra:.3f}_{dec:.3f}",
+        outdir=outdir
     )
     return fitter
 
@@ -280,6 +283,13 @@ VO_LOTSS_DR2 = "https://vo.astron.nl/lotss_dr2/q/src_cone/scs.xml"
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Fit a synchrotron spectrum for a specific source using archival radio data."
+    )
+    parser.add_argument(
+        "--output_dir",
+        dest="outdir",
+        type=str,
+        help="directory to save results in [default cwd]",
+        default=".",
     )
     parser.add_argument(
         "--ra", type=float, help="Right ascension of the target source."
