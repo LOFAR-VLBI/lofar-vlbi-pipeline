@@ -23,10 +23,9 @@ plt.rcParams.update(
 )
 
 
-
-
 class Fitter(ABC):
     fit_parameters = None
+    freq_points = 0
 
     def __init__(self, freq_ref=144e6):
         self.freq_ref = freq_ref
@@ -36,7 +35,8 @@ class Fitter(ABC):
         pass
 
     def fit(self, freq: np.ndarray, flux_density: np.ndarray, p0: tuple) -> tuple:
-        popt, pcov = curve_fit(self.fit_func, xdata=freq, ydata=flux_density, p0=p0)
+        self.freq_points = len(freq)
+        popt, pcov = curve_fit(self.fit_func, xdata=freq, ydata=flux_density, p0=p0,)
         self.fit_parameters = popt
         return popt
 
@@ -46,7 +46,7 @@ class Fitter(ABC):
         fluxs,
         point_labels: list[str] | None = None,
         file_name: str | None = None,
-        outdir="."
+        outdir=".",
     ):
         freq_smooth = np.linspace(10e6, 10e9, 1000)
         plt.figure(figsize=(8, 8))
@@ -83,9 +83,13 @@ class Fitter(ABC):
         plt.xlim(10e6, 10e9)
         plt.ylim(10e-3, 10)
         if file_name:
-            plt.savefig(os.path.join(outdir,f"{file_name}.png"), dpi=300, bbox_inches="tight")
+            plt.savefig(
+                os.path.join(outdir, f"{file_name}.png"), dpi=300, bbox_inches="tight"
+            )
         else:
-            plt.savefig(os.path.join(outdir,"spectrum.png"), dpi=300, bbox_inches="tight")
+            plt.savefig(
+                os.path.join(outdir, "spectrum.png"), dpi=300, bbox_inches="tight"
+            )
 
 
 class LogFitter(Fitter):
@@ -95,22 +99,6 @@ class LogFitter(Fitter):
         )
 
 
-class MultiFreq:
-    freq: list = []
-    flux_density: list = []
-    survey_names: list = []
-    fitter: Fitter = LogFitter()
-
-    def __init__(self):
-        #To implement
-        pass
-
-    def make_plot(self):
-        self.fitter.plot(self.freqs, self.flux_density, self.survey_names)
-
-
-
-
 def fit_from_NED(ra: float, dec: float, radius: float, outdir: str):
     obj = Ned.query_region(f"{ra}d {dec}d", radius=radius * u.arcsec)["Object Name"][0]
 
@@ -118,10 +106,11 @@ def fit_from_NED(ra: float, dec: float, radius: float, outdir: str):
     ned_photometry = ned_table[np.where(ned_table["Frequency"] < 1e10)]
     freqs = ned_photometry["Frequency"]
     fluxd_ned = ned_photometry["Flux Density"]
-
     fitter = LogFitter()
     fitter.fit(freqs, fluxd_ned, p0=(1.0, -0.8, 0.0))
-    fitter.plot(freqs, fluxd_ned, file_name=f"spectrum_{ra:.3f}_{dec:.3f}_NED", outdir=outdir)
+    fitter.plot(
+        freqs, fluxd_ned, file_name=f"spectrum_{ra:.3f}_{dec:.3f}_NED", outdir=outdir
+    )
     return fitter
 
 
@@ -135,8 +124,9 @@ def query_vizier(
     else:
         raise RuntimeError("Source not found in requested survey.")
 
+
 def query_bootstrap(
-        catalogue: str, ra: float, dec: float, radius: float
+    catalogue: str, ra: float, dec: float, radius: float
 ) -> astropy.table.table.Table:
     with fits.open(catalogue) as hdul:
         catalog = astropy.table.Table(hdul[1].data)
@@ -149,6 +139,7 @@ def query_bootstrap(
         return q[0]
     else:
         raise RuntimeError("Source not found in requested survey.")
+
 
 def query_vo(
     vo_server: str, ra: float, dec: float, radius: float
@@ -177,6 +168,8 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
     except RuntimeError:
         print("Source not in LoLSS DR1")
 
+
+    # Old VLSSr code which we think is wrong
     # try:
     #     s_vlssr = query_vizier(VIZIER_VLSSr, ra, dec, radius)["Sp"].to("Jy").value[0]
     #     has_survey ^= 0b0100000
@@ -187,8 +180,7 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
     #     print("Source not in VLSSr")
 
     try:
-        s_vlssr = query_bootstrap(BOOTSTRAP_VSSLr, ra, dec, radius)["Total_flux"]
-        has_survey ^= 0b0100000
+        s_vlssr = query_bootstrap(BOOTSTRAP_VSSLr, ra, dec, radius)["Total_flux"] # Jy
         frequency.append(74e6)
         flux_density.append(s_vlssr)
         survey_name.append("VLSSr")
@@ -270,24 +262,26 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
     # except RuntimeError:
     #    print("Source not in VLASS QL1")
     print(f"Survey mask: {has_survey:07b}")
-    if HAS_LOTSS:
-        fitter = LogFitter(freq_ref=144e6)
-    elif HAS_TGSS:
-        fitter = LogFitter(freq_ref=144e6)
+    # if HAS_LOTSS:
+    #     fitter = LogFitter(freq_ref=144e6)
+    # elif HAS_TGSS:
+    #     fitter = LogFitter(freq_ref=150e6)
+
+    fitter = LogFitter(freq_ref=144e6)
     fitter.fit(frequency, flux_density, p0=(1.0, -0.8, 0.0))
     fitter.plot(
         frequency,
         flux_density,
         point_labels=survey_name,
         file_name=f"spectrum_{ra:.3f}_{dec:.3f}",
-        outdir=outdir
+        outdir=outdir,
     )
     return fitter
 
 
 # 55 MHz
 VIZIER_LOLSS_DR1 = "J/A+A/673/A165/lolss1g"
-# 74 MHz
+# 74 MHz - ???
 VIZIER_VLSSr = "VIII/97/catalog"
 # VLSSr_FIXED
 BOOTSTRAP_VSSLr = "https://www.extragalactic.info/bootstrap/VLSS.fits"

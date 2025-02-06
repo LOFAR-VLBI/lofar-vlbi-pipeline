@@ -759,6 +759,53 @@ def convert_cutout(fitsfile):
     plt.savefig("assets/cutout.png", bbox_inches="tight", pad_inches=0)
 
 
+def fit_spectrum(result, delay_cals_file, outdir):
+    # Empty columns for fitting parameters within delay calibration
+    total_flux_column = Column([None] * len(result), name="fit_flux", unit="Jy")
+    alpha_1_column = Column([None] * len(result), name="alpha_1")
+    alpha_2_column = Column([None] * len(result), name="alpha_2")
+    survey_column = Column([None] * len(result), name="Catalogue")
+    no_points_column = Column([None] * len(result), name="phot_points")
+    result.add_column(total_flux_column)
+    result.add_column(alpha_1_column)
+    result.add_column(alpha_2_column)
+    result.add_column(survey_column)
+    result.add_column(no_points_column)
+    result.write(delay_cals_file, format="csv", overwrite=True)
+
+    for i, source in enumerate(result):
+        fit_parameters_trusted = None
+        fit_parameters_NED = None
+        no_points = 0
+        try:
+            fit = fit_from_trusted_surveys(source["RA"], source["DEC"], 12.0, outdir)
+            fit_parameters_trusted = fit.fit_parameters
+            no_points = fit.freq_points
+        except (ValueError, TypeError, IndexError):
+            print(f"Calibrator {source['Source_id']} could not be fit with trusted surveys!")
+            try:
+                fit = fit_from_NED(source["RA"], source["DEC"], 12.0, outdir)
+                fit_parameters_NED = fit.fit_parameters
+                no_points = fit.freq_points
+            except (ValueError, TypeError):
+                print(f"Calibrator {source['Source_id']} could not be fit with NED or trusted surveys!")
+
+        if fit_parameters_trusted is not None:
+            fitting_parameters = np.append(fit_parameters_trusted, "Trusted")
+        elif fit_parameters_NED is not None:
+            fitting_parameters = np.append(fit_parameters_NED, "NED")
+        else:
+            fitting_parameters = [None, None, None, None]
+
+        result["fit_flux"][i] = fitting_parameters[0]
+        result["alpha_1"][i] = fitting_parameters[1]
+        result["alpha_2"][i] = fitting_parameters[2]
+        result["Catalogue"][i] = fitting_parameters[3]
+        result["phot_points"][i] = no_points
+
+    result.write(delay_cals_file, format="csv", overwrite=True)
+
+
 def make_html(
     RATar,
     DECTar,
@@ -1000,6 +1047,7 @@ def generate_catalogues(
     html=False,
     outdir=".",
     pointing=None,
+    fit_spec=False,
 ):
     # def plugin_main( RA, DEC, **kwargs ):
     #    im_radius = float(kwargs['im_radius'])
@@ -1073,7 +1121,7 @@ def generate_catalogues(
         return
     if len(lotss_catalogue) == 0 and not continue_no_lotss:
         logging.error(
-            "LoTSS coverage does not exist, and contine_without_lotss is set to False."
+            "LoTSS coverage does not exist, and contine_no_lotss is set to False."
         )
         return
 
@@ -1168,7 +1216,7 @@ def generate_catalogues(
             ## order based on radius from the phase centre
             result.sort("gscore")
 
-            #result.rename_column('Observation','Source_id')
+            # result.rename_column('Observation','Source_id')
 
             ## Write catalogues
             ## 1 - delay calibrators -- from lbcs_catalogue
@@ -1229,49 +1277,8 @@ def generate_catalogues(
         outdir=outdir,
     )
 
-    # Empty columns for fitting parameters within delay calibration
-    total_flux_column = Column([None] * len(result), name='fit_flux', unit='Jy')  
-    alpha_1_column = Column([None] * len(result), name='alpha_1')  
-    alpha_2_column = Column([None] * len(result), name='alpha_2')
-    survey_column = Column([None] * len(result), name='Catalogue')  
-    result.add_column(total_flux_column)
-    result.add_column(alpha_1_column)
-    result.add_column(alpha_2_column)
-    result.add_column(survey_column)
-    result.write(delay_cals_file, format='csv', overwrite=True)
-
-    fits = []
-    for i,source in enumerate(result):
-        try:
-            fit = fit_from_NED(source['RA'], source['DEC'], 12.0, outdir)
-            fit_parameters_NED = fit.fit_parameters
-            fits.append(fit)  
-        except ValueError:
-            print("Source could not be fit - ValueError")
-        except TypeError:
-            print("Could not be fit - TypeError")
-
-        try:
-            fit = fit_from_trusted_surveys(source['RA'], source['DEC'], 12.0, outdir)
-            fits.append(fit)
-            fit_parameters_trusted = fit.fit_parameters
-        except ValueError:
-            print("Source could not be fit - ValueError")
-        except TypeError:
-            print("Could not be fit - TypeError")
-
-        if fit_parameters_trusted is not None:
-            fitting_parameters = np.append(fit_parameters_trusted, 'Trusted')
-        elif fit_parameters_NED is not None:
-            fitting_parameters = np.append(fit_parameters_NED, 'NED')
-        else:
-            fitting_parameters = [None, None, None, None]
-
-        result['fit_flux'][i] = fitting_parameters[0] 
-        result['alpha_1'][i] = fitting_parameters[1]    
-        result['alpha_2'][i] = fitting_parameters[2]
-        result['Catalogue'][i] = fitting_parameters[3] 
-        result.write(delay_cals_file, format='csv', overwrite=True)
+    if fit_spec:
+        fit_spectrum(result, delay_cals_file, outdir)
 
     if vlass:
         from vlass_search import search_vlass
@@ -1305,7 +1312,7 @@ def generate_catalogues(
             pointing=pointing,
         )
         app.run_server(debug=True, use_reloader=False)
-    #return          
+    # return
 
 
 if __name__ == "__main__":
@@ -1425,6 +1432,14 @@ if __name__ == "__main__":
         default=False,
     )
 
+    parser.add_argument(
+        "--fit_spec",
+        dest="fit_spec",
+        action="store_true",
+        help="Perform spectral fitting",
+        default=False,
+    )
+
     parser.add_argument("--RA", type=float, dest="RA", help="Ptg RA in deg")
     parser.add_argument("--DEC", type=float, dest="DEC", help="Ptg DEC in deg")
     parser.add_argument("--pointing", type=str, dest="pointing", help="Pointing name")
@@ -1459,6 +1474,7 @@ if __name__ == "__main__":
         html=args.html,
         outdir=args.outdir,
         pointing=args.pointing,
+        fit_spec=args.fit_spec,
     )
 
 
