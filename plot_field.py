@@ -765,31 +765,37 @@ def fit_spectrum(result, delay_cals_file, outdir):
     alpha_1_column = Column([None] * len(result), name="alpha_1")
     alpha_2_column = Column([None] * len(result), name="alpha_2")
     survey_column = Column([None] * len(result), name="Catalogue")
+    chi_sqr = Column([None] * len(result), name="Chi_sqr")
     no_points_column = Column([None] * len(result), name="phot_points")
     result.add_column(total_flux_column)
     result.add_column(alpha_1_column)
     result.add_column(alpha_2_column)
-    result.add_column(survey_column)
+    result.add_column(chi_sqr)
     result.add_column(no_points_column)
+    result.add_column(survey_column)
     result.write(delay_cals_file, format="csv", overwrite=True)
 
     for i, source in enumerate(result):
         fit_parameters_trusted = None
         fit_parameters_NED = None
+        chi_square = None
         no_points = 0
+
+        fit = fit_from_trusted_surveys(source["RA"], source["DEC"], 12.0, outdir)
+        fit_parameters_trusted, chi_square = fit.fit_parameters, fit.stats
+        no_points = fit.freq_points
         try:
             fit = fit_from_trusted_surveys(source["RA"], source["DEC"], 12.0, outdir)
-            fit_parameters_trusted = fit.fit_parameters
+            fit_parameters_trusted, chi_square = fit.fit_parameters, fit.stats
             no_points = fit.freq_points
         except (ValueError, TypeError, IndexError):
-            print(f"Calibrator {source['Source_id']} could not be fit with trusted surveys!")
             try:
                 fit = fit_from_NED(source["RA"], source["DEC"], 12.0, outdir)
-                fit_parameters_NED = fit.fit_parameters
+                fit_parameters_NED, chi_square = fit.fit_parameters, fit.stats
                 no_points = fit.freq_points
             except (ValueError, TypeError):
                 print(f"Calibrator {source['Source_id']} could not be fit with NED or trusted surveys!")
-
+        
         if fit_parameters_trusted is not None:
             fitting_parameters = np.append(fit_parameters_trusted, "Trusted")
         elif fit_parameters_NED is not None:
@@ -800,9 +806,9 @@ def fit_spectrum(result, delay_cals_file, outdir):
         result["fit_flux"][i] = fitting_parameters[0]
         result["alpha_1"][i] = fitting_parameters[1]
         result["alpha_2"][i] = fitting_parameters[2]
-        result["Catalogue"][i] = fitting_parameters[3]
+        result["Chi_sqr"][i] = chi_square
         result["phot_points"][i] = no_points
-
+        result["Catalogue"][i] = fitting_parameters[3]
     result.write(delay_cals_file, format="csv", overwrite=True)
 
 
