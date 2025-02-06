@@ -4,7 +4,9 @@ from typing import Any
 import os
 
 import astropy
+from astropy.coordinates import SkyCoord
 import astropy.units as u
+from astropy.io import fits
 import matplotlib.pyplot as plt
 import numpy as np
 import pyvo
@@ -26,7 +28,7 @@ plt.rcParams.update(
 class Fitter(ABC):
     fit_parameters = None
 
-    def __init__(self, freq_ref=150e6):
+    def __init__(self, freq_ref=144e6):
         self.freq_ref = freq_ref
 
     @abstractmethod
@@ -133,6 +135,20 @@ def query_vizier(
     else:
         raise RuntimeError("Source not found in requested survey.")
 
+def query_bootstrap(
+        catalogue: str, ra: float, dec: float, radius: float
+) -> astropy.table.table.Table:
+    with fits.open(catalogue) as hdul:
+        catalog = astropy.table.Table(hdul[1].data)
+    cat_coords = SkyCoord(catalog["RA"], catalog["DEC"], unit="deg")
+    targ_coord = SkyCoord(ra, dec, unit="deg")
+    sep = targ_coord.separation(cat_coords)
+    match = sep < (radius * u.arcsec)
+    q = catalog[match]
+    if q:
+        return q[0]
+    else:
+        raise RuntimeError("Source not found in requested survey.")
 
 def query_vo(
     vo_server: str, ra: float, dec: float, radius: float
@@ -161,8 +177,17 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
     except RuntimeError:
         print("Source not in LoLSS DR1")
 
+    # try:
+    #     s_vlssr = query_vizier(VIZIER_VLSSr, ra, dec, radius)["Sp"].to("Jy").value[0]
+    #     has_survey ^= 0b0100000
+    #     frequency.append(74e6)
+    #     flux_density.append(s_vlssr)
+    #     survey_name.append("VLSSr")
+    # except RuntimeError:
+    #     print("Source not in VLSSr")
+
     try:
-        s_vlssr = query_vizier(VIZIER_VLSSr, ra, dec, radius)["Sp"].to("Jy").value[0]
+        s_vlssr = query_bootstrap(BOOTSTRAP_VSSLr, ra, dec, radius)["Total_flux"]
         has_survey ^= 0b0100000
         frequency.append(74e6)
         flux_density.append(s_vlssr)
@@ -248,7 +273,7 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
     if HAS_LOTSS:
         fitter = LogFitter(freq_ref=144e6)
     elif HAS_TGSS:
-        fitter = LogFitter(freq_ref=150e6)
+        fitter = LogFitter(freq_ref=144e6)
     fitter.fit(frequency, flux_density, p0=(1.0, -0.8, 0.0))
     fitter.plot(
         frequency,
@@ -264,6 +289,8 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
 VIZIER_LOLSS_DR1 = "J/A+A/673/A165/lolss1g"
 # 74 MHz
 VIZIER_VLSSr = "VIII/97/catalog"
+# VLSSr_FIXED
+BOOTSTRAP_VSSLr = "https://www.extragalactic.info/bootstrap/VLSS.fits"
 # 325 MHz
 VIZIER_WENSS = "VIII/62/wenss"
 # 1.4 GHz
