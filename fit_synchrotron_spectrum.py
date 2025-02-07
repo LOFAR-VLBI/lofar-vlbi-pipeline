@@ -35,16 +35,20 @@ class Fitter(ABC):
     def fit_func(self, *args, **kwargs) -> Any:
         pass
 
-    def fit(self, freq: np.ndarray, flux_density: np.ndarray, p0: tuple, sigma: np.ndarray) -> tuple:
+    def fit(
+        self, freq: np.ndarray, flux_density: np.ndarray, p0: tuple, sigma: np.ndarray
+    ) -> tuple:
         self.freq_points = len(freq)
-        popt, pcov = curve_fit(self.fit_func, xdata=freq, ydata=flux_density, p0=p0, sigma=sigma)
+        popt, pcov = curve_fit(
+            self.fit_func, xdata=freq, ydata=flux_density, p0=p0, sigma=sigma
+        )
         self.fit_parameters = popt
         residuals = flux_density - self.fit_func(np.array(freq), *popt)
         flux_err = sigma
-        chi_sqr = np.sum(((residuals)/flux_err)**2) 
+        chi_sqr = np.sum(((residuals) / flux_err) ** 2)
         self.stats = chi_sqr
         return popt, chi_sqr
-    
+
     def plot(
         self,
         freqs,
@@ -61,7 +65,7 @@ class Fitter(ABC):
         plt.setp(plt.gca().spines.values(), linewidth=1.5)
         plt.gca().xaxis.set_tick_params(width=1.5, which="both")
         plt.gca().yaxis.set_tick_params(width=1.5, which="both")
-        plt.errorbar(freqs, fluxs, yerr=f_err, ls='none')
+        plt.errorbar(freqs, fluxs, yerr=f_err, ls="none")
         plt.scatter(freqs, fluxs, marker="s", ec="k", fc="gray", s=64)
 
         if point_labels:
@@ -115,7 +119,7 @@ def fit_from_NED(ra: float, dec: float, radius: float, outdir: str):
     ned_photometry = ned_table[np.where(ned_table["Frequency"] < 1e10)]
     freqs = ned_photometry["Frequency"]
     fluxd_ned = ned_photometry["Flux Density"]
-    fluxd_Ned_err = 0.1 * fluxd_ned # PLACEHOLDER
+    fluxd_Ned_err = 0.1 * fluxd_ned  # PLACEHOLDER
     fitter = LogFitter()
     fitter.fit(freqs, fluxd_ned, p0=(1.0, -0.8, 0.0), sigma=fluxd_Ned_err)
     fitter.plot(
@@ -172,17 +176,16 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
         s_lolss = (
             query_vizier(VIZIER_LOLSS_DR1, ra, dec, radius)["Ftot"].to("Jy").value[0]
         )
-        e_s_lolss = (
-            query_vizier(VIZIER_LOLSS_DR1, ra, dec, radius)["E_Total_flux"].to("Jy").value[0]
-        )
+        # e_s_lolss = (
+        #     query_vizier(VIZIER_LOLSS_DR1, ra, dec, radius)["E_Total_flux"].to("Jy").value[0]
+        # )
         has_survey ^= 0b1000000
         frequency.append(60e6)
         flux_density.append(s_lolss)
-        flux_err.append(e_s_lolss)
+        flux_err.append(s_lolss * 0.1)
         survey_name.append("LOLSS")
     except RuntimeError:
         print("Source not in LoLSS DR1")
-
 
     # Old VLSSr code which we think is wrong
     # try:
@@ -195,11 +198,13 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
     #     print("Source not in VLSSr")
 
     try:
-        s_vlssr = query_bootstrap(BOOTSTRAP_VSSLr, ra, dec, radius)["Total_flux"] # Jy 
-        e_s_vlssr = query_bootstrap(BOOTSTRAP_VSSLr, ra, dec, radius)["E_Total_flux"] # Jy
+        s_vlssr = query_bootstrap(BOOTSTRAP_VSSLr, ra, dec, radius)["Total_flux"]  # Jy
+        e_s_vlssr = query_bootstrap(BOOTSTRAP_VSSLr, ra, dec, radius)[
+            "E_Total_flux"
+        ]  # Jy
         frequency.append(74e6)
         flux_density.append(s_vlssr)
-        flux_err.append(e_s_vlssr) 
+        flux_err.append(e_s_vlssr)
         survey_name.append("VLSSr")
     except RuntimeError:
         print("Source not in VLSSr")
@@ -212,7 +217,7 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
         frequency.append(144e6)
         survey_name.append("LOTSS")
         flux_density.append(s_lotss)
-        flux_err.append(e_s_lotss) 
+        flux_err.append(e_s_lotss)
         HAS_LOTSS = True
     except RuntimeError:
         HAS_LOTSS = False
@@ -242,14 +247,16 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
         else:
             frequency.append(352e6)
         flux_density.append(s_wenss)
-        flux_err.append(s_wenss * 0.1) #PLACEHOLDER
+        flux_err.append(s_wenss * 0.1)  # PLACEHOLDER
         survey_name.append("WENSS")
     except RuntimeError:
         print("Source not in WENSS")
 
     try:
         s_sumss = query_vizier(VIZIER_SUMSS, ra, dec, radius)["St"].to("Jy").value[0]
-        e_s_sumss = query_vizier(VIZIER_SUMSS, ra, dec, radius)["e_St"].to("Jy").value[0]
+        e_s_sumss = (
+            query_vizier(VIZIER_SUMSS, ra, dec, radius)["e_St"].to("Jy").value[0]
+        )
         has_survey ^= 0b0000100
         frequency.append(843e6)
         flux_density.append(s_sumss)
@@ -264,7 +271,7 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
         frequency.append(1.4e9)
         flux_density.append(s_first)
         # Errors reported to be within ~5%
-        flux_err.append(0.05*s_first) 
+        flux_err.append(0.05 * s_first)
         survey_name.append("FIRST")
     except RuntimeError:
         print("Source not in FIRST")
@@ -281,17 +288,19 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
         print("Source not in GB6")
 
     try:
-       s_vlass = query_vizier(VIZIER_VLASS_QL1, ra, dec, radius)["Ftot"].to("Jy").value[0]
-       #has_survey ^= 0b0000001
-       frequency.append(3e9)
-       # VLASS reports a ~15% underestimate of measurements in the QL catalogues,
-       # so we roughly correct that here.
-       flux_density.append(s_vlass * 1.15)
-       flux_err.append(0.1*s_vlass) #PLACEHOLDER
-       survey_name.append("VLASS")
+        s_vlass = (
+            query_vizier(VIZIER_VLASS_QL1, ra, dec, radius)["Ftot"].to("Jy").value[0]
+        )
+        # has_survey ^= 0b0000001
+        frequency.append(3e9)
+        # VLASS reports a ~15% underestimate of measurements in the QL catalogues,
+        # so we roughly correct that here.
+        flux_density.append(s_vlass * 1.15)
+        flux_err.append(0.1 * s_vlass)  # PLACEHOLDER
+        survey_name.append("VLASS")
     except RuntimeError:
-       print("Source not in VLASS QL1")
-    #print(f"Survey mask: {has_survey:07b}")
+        print("Source not in VLASS QL1")
+    # print(f"Survey mask: {has_survey:07b}")
     if HAS_LOTSS:
         fitter = LogFitter(freq_ref=144e6)
     elif HAS_TGSS:

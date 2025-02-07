@@ -781,13 +781,14 @@ def fit_spectrum(result, delay_cals_file, outdir):
         chi_square = None
         no_points = 0
 
-
         try:
             fit = fit_from_trusted_surveys(source["RA"], source["DEC"], 12.0, outdir)
             fit_parameters_trusted, chi_square = fit.fit_parameters, fit.stats
             no_points = fit.freq_points
             if chi_square > 20:
-                print(f"Calibrator {source['Source_id']} has a poor fit! (χ² = {chi_square:.2f})")
+                print(
+                    f"Calibrator {source['Source_id']} has a poor fit! (χ² = {chi_square:.2f})"
+                )
                 raise ValueError
         except (ValueError, TypeError, IndexError):
             try:
@@ -795,8 +796,10 @@ def fit_spectrum(result, delay_cals_file, outdir):
                 fit_parameters_NED, chi_square = fit.fit_parameters, fit.stats
                 no_points = fit.freq_points
             except (ValueError, TypeError):
-                print(f"Calibrator {source['Source_id']} could not be fit with NED or trusted surveys!")
-        
+                print(
+                    f"Calibrator {source['Source_id']} could not be fit with NED or trusted surveys!"
+                )
+
         if fit_parameters_NED is not None:
             fitting_parameters = np.append(fit_parameters_NED, "NED")
         elif fit_parameters_trusted is not None:
