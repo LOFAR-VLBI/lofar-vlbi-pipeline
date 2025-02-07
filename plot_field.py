@@ -765,7 +765,7 @@ def fit_spectrum(result, delay_cals_file, outdir):
     alpha_1_column = Column([None] * len(result), name="alpha_1")
     alpha_2_column = Column([None] * len(result), name="alpha_2")
     survey_column = Column([None] * len(result), name="Catalogue")
-    chi_sqr = Column([None] * len(result), name="Chi_sqr")
+    chi_sqr = Column([None] * len(result), name="chi_sqr")
     no_points_column = Column([None] * len(result), name="phot_points")
     result.add_column(total_flux_column)
     result.add_column(alpha_1_column)
@@ -806,7 +806,7 @@ def fit_spectrum(result, delay_cals_file, outdir):
         result["fit_flux"][i] = fitting_parameters[0]
         result["alpha_1"][i] = fitting_parameters[1]
         result["alpha_2"][i] = fitting_parameters[2]
-        result["Chi_sqr"][i] = chi_square
+        result["chi_sqr"][i] = chi_square
         result["phot_points"][i] = no_points
         result["Catalogue"][i] = fitting_parameters[3]
     result.write(delay_cals_file, format="csv", overwrite=True)

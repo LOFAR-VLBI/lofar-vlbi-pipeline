@@ -41,7 +41,7 @@ class Fitter(ABC):
         self.fit_parameters = popt
         residuals = flux_density - self.fit_func(np.array(freq), *popt)
         flux_err = sigma
-        chi_sqr = np.sum(((residuals)/flux_err)**2)
+        chi_sqr = np.sum(((residuals)/flux_err)**2) 
         self.stats = chi_sqr
         return popt, chi_sqr
     
@@ -172,10 +172,13 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
         s_lolss = (
             query_vizier(VIZIER_LOLSS_DR1, ra, dec, radius)["Ftot"].to("Jy").value[0]
         )
+        # e_s_lolss = (
+        #     query_vizier(VIZIER_LOLSS_DR1, ra, dec, radius)['e_Ftot'].to("Jy").value[0]
+        # )
         has_survey ^= 0b1000000
         frequency.append(60e6)
         flux_density.append(s_lolss)
-        flux_err.append(0.1*s_lolss) #PLACEHOLDER
+        flux_err.append(s_lolss * 0.1) #PLACEHOLDER
         survey_name.append("LOLSS")
     except RuntimeError:
         print("Source not in LoLSS DR1")
@@ -218,10 +221,13 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
             s_tgss = (
                 query_vizier(VIZIER_TGSS, ra, dec, radius)["Stotal"].to("Jy").value[0]
             )
+            e_s_tgss = (
+                query_vizier(VIZIER_TGSS, ra, dec, radius)["e_Stotal"].to("Jy").value[0]
+            )
             has_survey ^= 0b0010000
             frequency.append(150e6)
             flux_density.append(s_tgss)
-            flux_err.append(0.1*s_tgss) #PLACEHOLDER
+            flux_err.append(e_s_tgss) #PLACEHOLDER
             survey_name.append("TGSS")
         except RuntimeError:
             print("Source not in TGSS")
@@ -236,13 +242,14 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
         else:
             frequency.append(352e6)
         flux_density.append(s_wenss)
-        flux_err.append(0.1*s_wenss) #PLACEHOLDER
+        flux_err.append(s_wenss * 0.1) #PLACEHOLDER
         survey_name.append("WENSS")
     except RuntimeError:
         print("Source not in WENSS")
 
     try:
-        s_sumss = query_vizier(VIZIER_SUMSS, ra, dec, radius)["Sint"].to("Jy").value[0]
+        s_sumss = query_vizier(VIZIER_SUMSS, ra, dec, radius)["St"].to("Jy").value[0]
+        s_sumss = query_vizier(VIZIER_SUMSS, ra, dec, radius)["e_St"].to("Jy").value[0]
         has_survey ^= 0b0000100
         frequency.append(843e6)
         flux_density.append(s_sumss)
@@ -256,17 +263,18 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
         has_survey ^= 0b0000010
         frequency.append(1.4e9)
         flux_density.append(s_first)
-        flux_err.append(0.1*s_first)
+        flux_err.append(0.05*s_first) #PLACEHOLDER
         survey_name.append("FIRST")
     except RuntimeError:
         print("Source not in FIRST")
 
     try:
         s_gb6 = query_vizier(VIZIER_GB6, ra, dec, radius)["Flux"].to("Jy").value[0]
+        e_s_gb6 = query_vizier(VIZIER_GB6, ra, dec, radius)["e_Flux"].to("Jy").value[0]
         has_survey ^= 0b0000001
         frequency.append(4.85e9)
         flux_density.append(s_gb6)
-        flux_err.append(0.1*s_gb6) #PLACEHOLDER
+        flux_err.append(e_s_gb6) #PLACEHOLDER
         survey_name.append("GB6")
     except RuntimeError:
         print("Source not in GB6")
