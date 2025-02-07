@@ -172,13 +172,13 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
         s_lolss = (
             query_vizier(VIZIER_LOLSS_DR1, ra, dec, radius)["Ftot"].to("Jy").value[0]
         )
-        # e_s_lolss = (
-        #     query_vizier(VIZIER_LOLSS_DR1, ra, dec, radius)['e_Ftot'].to("Jy").value[0]
-        # )
+        e_s_lolss = (
+            query_vizier(VIZIER_LOLSS_DR1, ra, dec, radius)["E_Total_flux"].to("Jy").value[0]
+        )
         has_survey ^= 0b1000000
         frequency.append(60e6)
         flux_density.append(s_lolss)
-        flux_err.append(s_lolss * 0.1) #PLACEHOLDER
+        flux_err.append(e_s_lolss)
         survey_name.append("LOLSS")
     except RuntimeError:
         print("Source not in LoLSS DR1")
@@ -227,7 +227,7 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
             has_survey ^= 0b0010000
             frequency.append(150e6)
             flux_density.append(s_tgss)
-            flux_err.append(e_s_tgss) #PLACEHOLDER
+            flux_err.append(e_s_tgss)
             survey_name.append("TGSS")
         except RuntimeError:
             print("Source not in TGSS")
@@ -249,11 +249,11 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
 
     try:
         s_sumss = query_vizier(VIZIER_SUMSS, ra, dec, radius)["St"].to("Jy").value[0]
-        s_sumss = query_vizier(VIZIER_SUMSS, ra, dec, radius)["e_St"].to("Jy").value[0]
+        e_s_sumss = query_vizier(VIZIER_SUMSS, ra, dec, radius)["e_St"].to("Jy").value[0]
         has_survey ^= 0b0000100
         frequency.append(843e6)
         flux_density.append(s_sumss)
-        flux_err.append(0.1*s_sumss) #PLACEHOLDER
+        flux_err.append(e_s_sumss)
         survey_name.append("SUMSS")
     except RuntimeError:
         print("Source not in SUMSS")
@@ -263,7 +263,8 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
         has_survey ^= 0b0000010
         frequency.append(1.4e9)
         flux_density.append(s_first)
-        flux_err.append(0.05*s_first) #PLACEHOLDER
+        # Errors reported to be within ~5%
+        flux_err.append(0.05*s_first) 
         survey_name.append("FIRST")
     except RuntimeError:
         print("Source not in FIRST")
@@ -274,27 +275,27 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
         has_survey ^= 0b0000001
         frequency.append(4.85e9)
         flux_density.append(s_gb6)
-        flux_err.append(e_s_gb6) #PLACEHOLDER
+        flux_err.append(e_s_gb6)
         survey_name.append("GB6")
     except RuntimeError:
         print("Source not in GB6")
 
-    # try:
-    #    s_vlass = query_vizier(VIZIER_VLASS_QL1, ra, dec, radius)["Ftot"].to("Jy").value[0]
-    #    #has_survey ^= 0b0000001
-    #    frequency.append(3e9)
-    #    # VLASS reports a ~15% underestimate of measurements in the QL catalogues,
-    #    # so we roughly correct that here.
-    #    flux_density.append(s_vlass)# * 1.15)
-    #    flux_err.append(0.1*flux_density) #PLACEHOLDER
-    #    survey_name.append("VLASS")
-    # except RuntimeError:
-    #    print("Source not in VLASS QL1")
-    print(f"Survey mask: {has_survey:07b}")
-    # if HAS_LOTSS:
-    #     fitter = LogFitter(freq_ref=144e6)
-    # elif HAS_TGSS:
-    #     fitter = LogFitter(freq_ref=150e6)
+    try:
+       s_vlass = query_vizier(VIZIER_VLASS_QL1, ra, dec, radius)["Ftot"].to("Jy").value[0]
+       #has_survey ^= 0b0000001
+       frequency.append(3e9)
+       # VLASS reports a ~15% underestimate of measurements in the QL catalogues,
+       # so we roughly correct that here.
+       flux_density.append(s_vlass * 1.15)
+       flux_err.append(0.1*s_vlass) #PLACEHOLDER
+       survey_name.append("VLASS")
+    except RuntimeError:
+       print("Source not in VLASS QL1")
+    #print(f"Survey mask: {has_survey:07b}")
+    if HAS_LOTSS:
+        fitter = LogFitter(freq_ref=144e6)
+    elif HAS_TGSS:
+        fitter = LogFitter(freq_ref=150e6)
 
     fitter = LogFitter(freq_ref=144e6)
     fitter.fit(frequency, flux_density, p0=(1.0, -0.8, 0.0), sigma=flux_err)
