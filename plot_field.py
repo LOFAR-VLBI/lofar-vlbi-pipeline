@@ -599,13 +599,14 @@ def make_plot(
             transform=ax.get_transform("fk5"),
             zorder=-1,
         )
-        ax.text(
-            RA + thresh,
-            DEC,
-            fraction[i],
-            transform=ax.get_transform("fk5"),
-            fontsize="large",
-        )
+        #print(RA, RA + thresh[0])
+        # ax.text(
+        #     RA + thresh[0],
+        #     DEC,
+        #     fraction[i],
+        #     transform=ax.get_transform("fk5"),
+        #     fontsize="large",
+        # )
         ax.add_patch(c)
 
     ax.scatter(
@@ -708,7 +709,7 @@ def make_plot(
         )
     plt.legend(fontsize="large", loc="upper right")
 
-    plt.savefig(os.path.join(outdir, "output.png"))
+    plt.savefig(os.path.join(outdir, f"{RA}_{DEC}_output.png"))
     os.system("rm temp.fits")
 
 
@@ -785,10 +786,11 @@ def fit_spectrum(result, delay_cals_file, outdir):
             fit = fit_from_trusted_surveys(source["RA"], source["DEC"], 12.0, outdir)
             fit_parameters_trusted, chi_square = fit.fit_parameters, fit.stats
             no_points = fit.freq_points
-            if chi_square > 20:
+            if chi_square > 20 or np.abs(fit_parameters_trusted[1]) > 3:
                 print(
                     f"Calibrator {source['Source_id']} has a poor fit! (χ² = {chi_square:.2f})"
                 )
+                fit_parameters_trusted, chi_square = None, None
                 raise ValueError
         except (ValueError, TypeError, IndexError):
             try:

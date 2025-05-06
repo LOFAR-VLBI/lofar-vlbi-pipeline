@@ -6,7 +6,9 @@ docs/build
 output.png
 spectrum*.png
 src
+*.fit
 *.fits
+*output.png
 
 #Ruff and venv
 __pycache__
