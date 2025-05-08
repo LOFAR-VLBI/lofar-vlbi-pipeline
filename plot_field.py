@@ -5,9 +5,9 @@ import logging
 import io
 import numpy as np
 import pyvo as vo
-from astropy.table import Table, Column, hstack
+from astropy.table import Table, Column, hstack, unique
 import argparse
-
+import json
 # from lofarpipe.support.data_map import DataMap
 # from lofarpipe.support.data_map import DataProduct
 import requests
@@ -17,7 +17,7 @@ from astropy.io import fits
 from astropy.wcs import WCS
 from requests.adapters import Retry, HTTPAdapter
 from time import sleep
-from fit_synchrotron_spectrum import fit_from_NED, fit_from_trusted_surveys
+from fit_synchrotron_spectrum import fit_from_NED, fit_from_trusted_surveys, query_vizier
 
 
 def sum_digits(n):
@@ -817,6 +817,86 @@ def fit_spectrum(result, delay_cals_file, outdir):
         result["Catalogue"][i] = fitting_parameters[3]
     result.write(delay_cals_file, format="csv", overwrite=True)
 
+def ps_match(file):
+    t = Table.read(file)
+
+    ps_id_column = Column([None] * len(t), name="ps_id")
+    ps_ra_column = Column([None] * len(t), name="ps_RA", unit = 'deg')
+    ps_dec_column = Column([None] * len(t), name = "ps_DEC", unit = 'deg')
+
+    t.add_column(ps_id_column)
+    t.add_column(ps_ra_column)
+    t.add_column(ps_dec_column)
+
+
+    targets = []
+    for source in t:
+        id = source['Source_id']
+        ra = source['RA']
+        dec = source['DEC']
+
+        dict = {"ra" : str(ra), "dec": str(dec), "target": str(id)}
+
+        targets.append(dict)  
+
+    data = {"targets": targets,
+        "resolve": "False",
+        "radius": 0.000833/3} #1 arcsecond
+
+    URL = "https://catalogs.mast.stsci.edu/api/v0.1/panstarrs/dr2/mean/crossmatch/csv"
+    r = requests.post(URL, json = data) 
+    if len(r.text) > 10:
+        out_t = Table.read(r.text, format = 'csv')
+
+        out_t = unique(out_t, keys = '_searchID_')
+        out_t.sort(keys = ['_searchID_'])
+
+
+        for source in out_t:
+            index = source['_searchID_']
+            t['ps_id'][index] = source['MatchID']
+            t['ps_RA'][index] = source['MatchRA']
+            t['ps_DEC'][index] = source['MatchDEC']
+
+    t.write(file, overwrite = True)
+
+def gaia_quasar_match(file):
+    from astroquery.vizier import Vizier
+
+    t = Table.read(file)
+    t['_RAJ2000'] = t['RA'] * u.deg
+    t['_DEJ2000'] = t['DEC'] * u.deg
+    CatNorth = "J/ApJS/271/54/table4"
+
+    v = Vizier(catalog = CatNorth,
+        columns=['Gaia', 'RA_ICRS', 'DE_ICRS'])
+
+    # Match against table
+    print(f"Querying GAIA quasars for {file}")
+    out = v.query_region(t, radius="2s", inner_radius="0.01s")
+    if out:
+        key = out.keys()[0]
+        print(f"Found {len(out[key])} quasar cross-matches")
+    else:
+        print("Found no cross matches to GAIA quasars")
+    
+    gaia_id_column = Column([None] * len(t), name="gaia_id")
+    gaia_ra_column = Column([None] * len(t), name="gaia_RA", unit = 'deg')
+    gaia_dec_column = Column([None] * len(t), name = "gaia_DEC", unit = 'deg')
+
+    t.add_column(gaia_id_column)
+    t.add_column(gaia_ra_column)
+    t.add_column(gaia_dec_column)
+
+    for source in out:
+        index = source['_q'] - 1
+        t['gaia_id'][index] = source['Gaia']
+        t['gaia_RA'][index] = source['RA_ICRS']
+        t['gaia_DEC'][index] = source['DE_ICRS']
+    
+    t.write(file, overwrite = True)
+
+
 
 def make_html(
     RATar,
@@ -1274,6 +1354,13 @@ def generate_catalogues(
                 + " degrees of the phase centre."
             )
             sources_to_image.write(lotss_result_file, format="csv", overwrite=True)
+            gaia_quasar_match(lotss_result_file)
+            ps_match(lotss_result_file)
+
+    gaia_quasar_match(delay_cals_file)
+    ps_match(delay_cals_file)
+
+
 
     print("Assumed averaging - nchannels: %s; time averaging: %s" % (nchan, av_time))
     make_plot(
