@@ -22,7 +22,7 @@ from astropy.coordinates import SkyCoord
 from astropy.wcs.utils import skycoord_to_pixel
 from astropy.wcs import WCS
 from astropy.nddata import Cutout2D
-import casacore.tables as pt
+#import casacore.tables as pt
 try:
     from urllib.request import urlopen
 except ImportError:
@@ -229,6 +229,7 @@ if __name__=="__main__":
         ra = float(sys.argv[1])
         dec = float(sys.argv[2])
     except ValueError:
+        import casacore.tables as pt
         pi = 3.14159265358979
         table = pt.table(sys.argv[1]+"::FIELD")
         direction = table.getcol('PHASE_DIR').squeeze()
