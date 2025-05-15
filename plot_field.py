@@ -873,7 +873,7 @@ def gaia_quasar_match(file):
 
     # Match against table
     print(f"Querying GAIA quasars for {file}")
-    out = v.query_region(t, radius="2s", inner_radius="0.01s")
+    out = v.query_region(t, radius="2s", inner_radius="0.01s", cache = False)
     if out:
         key = out.keys()[0]
         print(f"Found {len(out[key])} quasar cross-matches")

@@ -113,7 +113,7 @@ class LogFitter(Fitter):
 
 
 def fit_from_NED(ra: float, dec: float, radius: float, outdir: str):
-    obj = Ned.query_region(f"{ra}d {dec}d", radius=radius * u.arcsec)["Object Name"][0]
+    obj = Ned.query_region(f"{ra}d {dec}d", radius=radius * u.arcsec, cache = False)["Object Name"][0]
 
     ned_table = Ned.get_table(obj, table="photometry")
     ned_photometry = ned_table[np.where(ned_table["Frequency"] < 1e10)]
@@ -132,7 +132,7 @@ def query_vizier(
     catalogue: str, ra: float, dec: float, radius: float
 ) -> astropy.table.table.Table:
     v = Vizier(catalog=catalogue)
-    q = v.query_region(f"{ra}, {dec}", radius=radius * u.arcsec)
+    q = v.query_region(f"{ra}, {dec}", radius=radius * u.arcsec, cache = False)
     if q:
         return q[0]
     else:
