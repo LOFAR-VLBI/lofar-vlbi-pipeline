@@ -14,6 +14,7 @@ from astroquery.ipac.ned import Ned
 from astroquery.vizier import Vizier
 from scipy.optimize import curve_fit
 
+
 plt.rcParams.update(
     {
         # "text.usetex": True,
@@ -115,7 +116,7 @@ class LogFitter(Fitter):
 def fit_from_NED(ra: float, dec: float, radius: float, outdir: str):
     obj = Ned.query_region(f"{ra}d {dec}d", radius=radius * u.arcsec, cache = False)["Object Name"][0]
 
-    ned_table = Ned.get_table(obj, table="photometry")
+    ned_table = Ned.get_table(obj, table="photometry", cache = False)
     ned_photometry = ned_table[np.where(ned_table["Frequency"] < 1e10)]
     freqs = ned_photometry["Frequency"]
     fluxd_ned = ned_photometry["Flux Density"]
