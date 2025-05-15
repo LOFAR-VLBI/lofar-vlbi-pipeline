@@ -760,7 +760,8 @@ def convert_cutout(fitsfile):
     plt.savefig("assets/cutout.png", bbox_inches="tight", pad_inches=0)
 
 
-def fit_spectrum(result, delay_cals_file, outdir):
+def fit_spectrum(delay_cals_file, outdir):
+    result = Table.read(delay_cals_file)
     # Empty columns for fitting parameters within delay calibration
     total_flux_column = Column([None] * len(result), name="fit_flux", unit="Jy")
     alpha_1_column = Column([None] * len(result), name="alpha_1")
@@ -1377,7 +1378,7 @@ def generate_catalogues(
     )
 
     if fit_spec:
-        fit_spectrum(result, delay_cals_file, outdir)
+        fit_spectrum(delay_cals_file, outdir)
 
     if vlass:
         from vlass_search import search_vlass
