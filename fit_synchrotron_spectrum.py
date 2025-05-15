@@ -182,7 +182,10 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
         has_survey ^= 0b1000000
         frequency.append(60e6)
         flux_density.append(s_lolss)
-        flux_err.append(s_lolss * 0.1)
+        if e_s_lolss == 0 or None:
+            e_s_lolss = 0.1 * s_lolss
+            print("LoLSS DR1 has an invalid error. Using 10% instead")
+        flux_err.append(e_s_lolss)
         survey_name.append("LOLSS")
     except RuntimeError:
         print("Source not in LoLSS DR1")
@@ -204,7 +207,10 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
         ]  # Jy
         frequency.append(74e6)
         flux_density.append(s_vlssr)
-        flux_err.append(e_s_vlssr)
+        if e_s_vlssr == 0 or None:
+            e_s_vlssr = 0.1 * s_vlssr
+            print("VLSSr has an invalid error so using 10% of flux density instead.")
+        flux_err.append(e_s_vlssr) 
         survey_name.append("VLSSr")
     except RuntimeError:
         print("Source not in VLSSr")
@@ -217,7 +223,10 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
         frequency.append(144e6)
         survey_name.append("LOTSS")
         flux_density.append(s_lotss)
-        flux_err.append(e_s_lotss)
+        if e_s_lotss == 0 or None:
+            e_s_lotss = 0.1 * s_lotss
+            print("LoTSS DR2 has an invalid error so using 10% of flux density instead.")
+        flux_err.append(e_s_lotss) 
         HAS_LOTSS = True
     except (RuntimeError, IndexError):
         HAS_LOTSS = False
@@ -232,6 +241,9 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
             has_survey ^= 0b0010000
             frequency.append(150e6)
             flux_density.append(s_tgss)
+            if e_s_tgss == 0 or None:
+                e_s_tgss = 0.1 * s_tgss
+                print("TGSS has an invalid error so using 10% of flux density instead.")
             flux_err.append(e_s_tgss)
             survey_name.append("TGSS")
         except RuntimeError:
@@ -247,7 +259,11 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
         else:
             frequency.append(352e6)
         flux_density.append(s_wenss)
-        flux_err.append(s_wenss * 0.2)  # PLACEHOLDER
+        e_s_wenss = 0
+        if e_s_wenss == 0 or None:
+            e_s_wenss = 0.2 * s_wenss
+            print("WENSS has an invalid error so using 20% of flux density instead.")
+        flux_err.append(e_s_wenss) #PLACEHOLDER
         survey_name.append("WENSS")
     except RuntimeError:
         print("Source not in WENSS")
@@ -260,6 +276,9 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
         has_survey ^= 0b0000100
         frequency.append(843e6)
         flux_density.append(s_sumss)
+        if e_s_sumss == 0 or None:
+            e_s_sumss = 0.1 * s_sumss
+            print("SUMSS has an invalid error so using 10% of flux density instead.")
         flux_err.append(e_s_sumss)
         survey_name.append("SUMSS")
     except RuntimeError:
@@ -320,10 +339,9 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
             outdir=outdir,
         )
         return fitter
-
+    
     else:
         raise RuntimeError("Not Enough Data to Fit")
-
 
 # 55 MHz
 VIZIER_LOLSS_DR1 = "J/A+A/673/A165/lolss1g"
