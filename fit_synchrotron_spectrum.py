@@ -114,9 +114,11 @@ class LogFitter(Fitter):
 
 
 def fit_from_NED(ra: float, dec: float, radius: float, outdir: str):
-    obj = Ned.query_region(f"{ra}d {dec}d", radius=radius * u.arcsec, cache = False)["Object Name"][0]
+    obj = Ned.query_region(f"{ra}d {dec}d", radius=radius * u.arcsec, cache=False)[
+        "Object Name"
+    ][0]
 
-    ned_table = Ned.get_table(obj, table="photometry", cache = False)
+    ned_table = Ned.get_table(obj, table="photometry", cache=False)
     ned_photometry = ned_table[np.where(ned_table["Frequency"] < 1e10)]
     freqs = ned_photometry["Frequency"]
     fluxd_ned = ned_photometry["Flux Density"]
@@ -133,7 +135,7 @@ def query_vizier(
     catalogue: str, ra: float, dec: float, radius: float
 ) -> astropy.table.table.Table:
     v = Vizier(catalog=catalogue)
-    q = v.query_region(f"{ra}, {dec}", radius=radius * u.arcsec, cache = False)
+    q = v.query_region(f"{ra}, {dec}", radius=radius * u.arcsec, cache=False)
     if q:
         return q[0]
     else:
@@ -178,7 +180,9 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
             query_vizier(VIZIER_LOLSS_DR1, ra, dec, radius)["Ftot"].to("Jy").value[0]
         )
         e_s_lolss = (
-            query_vizier(VIZIER_LOLSS_DR1, ra, dec, radius)["E_Total_flux"].to("Jy").value[0]
+            query_vizier(VIZIER_LOLSS_DR1, ra, dec, radius)["E_Total_flux"]
+            .to("Jy")
+            .value[0]
         )
         has_survey ^= 0b1000000
         frequency.append(60e6)
@@ -211,7 +215,7 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
         if e_s_vlssr == 0 or None:
             e_s_vlssr = 0.1 * s_vlssr
             print("VLSSr has an invalid error so using 10% of flux density instead.")
-        flux_err.append(e_s_vlssr) 
+        flux_err.append(e_s_vlssr)
         survey_name.append("VLSSr")
     except RuntimeError:
         print("Source not in VLSSr")
@@ -226,8 +230,10 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
         flux_density.append(s_lotss)
         if e_s_lotss == 0 or None:
             e_s_lotss = 0.1 * s_lotss
-            print("LoTSS DR2 has an invalid error so using 10% of flux density instead.")
-        flux_err.append(e_s_lotss) 
+            print(
+                "LoTSS DR2 has an invalid error so using 10% of flux density instead."
+            )
+        flux_err.append(e_s_lotss)
         HAS_LOTSS = True
     except (RuntimeError, IndexError):
         HAS_LOTSS = False
@@ -254,7 +260,7 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
     try:
         s_wenss = query_vizier(VIZIER_WENSS, ra, dec, radius)["Sint"].to("Jy").value[0]
         has_survey ^= 0b0001000
-        #325 MHz in main part, 352 MHz in polar part
+        # 325 MHz in main part, 352 MHz in polar part
         if dec < 72:
             frequency.append(325e6)
         else:
@@ -264,7 +270,7 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
         if e_s_wenss == 0 or None:
             e_s_wenss = 0.2 * s_wenss
             print("WENSS has an invalid error so using 20% of flux density instead.")
-        flux_err.append(e_s_wenss) #PLACEHOLDER
+        flux_err.append(e_s_wenss)  # PLACEHOLDER
         survey_name.append("WENSS")
     except RuntimeError:
         print("Source not in WENSS")
@@ -313,8 +319,8 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
         )
         has_survey ^= 0b0000001
         frequency.append(3e9)
-        #VLASS reports a ~15% underestimate of measurements in the QL catalogues,
-        #so we roughly correct that here.
+        # VLASS reports a ~15% underestimate of measurements in the QL catalogues,
+        # so we roughly correct that here.
         flux_density.append(s_vlass * 1.15)
         flux_err.append(0.2 * s_vlass)  # PLACEHOLDER
         survey_name.append("VLASS")
@@ -328,7 +334,6 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
         fitter = LogFitter(freq_ref=150e6)
 
     if len(flux_density) > 2:
-
         fitter = LogFitter(freq_ref=144e6)
         fitter.fit(frequency, flux_density, p0=(1.0, -0.8, 0.0), sigma=flux_err)
         fitter.plot(
@@ -340,9 +345,10 @@ def fit_from_trusted_surveys(ra: float, dec: float, radius: float, outdir: str):
             outdir=outdir,
         )
         return fitter
-    
+
     else:
         raise RuntimeError("Not Enough Data to Fit")
+
 
 # 55 MHz
 VIZIER_LOLSS_DR1 = "J/A+A/673/A165/lolss1g"
@@ -362,7 +368,6 @@ VIZIER_SUMSS = "VIII/81B/sumss212"
 VIZIER_TGSS = "J/A+A/598/A78/table3"
 # 3 GHz
 VIZIER_VLASS_QL1 = "J/ApJS/255/30/comp"
-
 
 
 # 144 MHz
