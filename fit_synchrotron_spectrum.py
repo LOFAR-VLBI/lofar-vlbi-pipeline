@@ -1,6 +1,5 @@
 import argparse
 from abc import ABC, abstractmethod
-from typing import Any
 import os
 
 import astropy
@@ -33,12 +32,12 @@ class Fitter(ABC):
         self.freq_ref = freq_ref
 
     @abstractmethod
-    def fit_func(self, *args, **kwargs) -> Any:
+    def fit_func(self, *args, **kwargs):
         pass
 
     def fit(
-        self, freq: np.ndarray, flux_density: np.ndarray, p0: tuple, sigma: np.ndarray
-    ) -> tuple:
+        self, freq, flux_density, p0, sigma
+    ):
         self.freq_points = len(freq)
         popt, pcov = curve_fit(
             self.fit_func, xdata=freq, ydata=flux_density, p0=p0, sigma=sigma
@@ -55,8 +54,8 @@ class Fitter(ABC):
         freqs,
         fluxs,
         f_err,
-        point_labels: list[str] | None = None,
-        file_name: str | None = None,
+        point_labels,
+        file_name,
         outdir=".",
     ):
         freq_smooth = np.linspace(10e6, 10e9, 1000)
@@ -107,7 +106,7 @@ class Fitter(ABC):
 
 
 class LogFitter(Fitter):
-    def fit_func(self, freq, I0, alpha, beta) -> float | np.ndarray:
+    def fit_func(self, freq, I0, alpha, beta):
         return I0 * (freq / self.freq_ref) ** (
             alpha + beta * np.log10(freq / self.freq_ref)
         )
@@ -133,7 +132,7 @@ def fit_from_NED(ra: float, dec: float, radius: float, outdir: str):
 
 def query_vizier(
     catalogue: str, ra: float, dec: float, radius: float
-) -> astropy.table.table.Table:
+):
     v = Vizier(catalog=catalogue)
     q = v.query_region(f"{ra}, {dec}", radius=radius * u.arcsec, cache=False)
     if q:
@@ -144,7 +143,7 @@ def query_vizier(
 
 def query_bootstrap(
     catalogue: str, ra: float, dec: float, radius: float
-) -> astropy.table.table.Table:
+):
     with fits.open(catalogue) as hdul:
         catalog = astropy.table.Table(hdul[1].data)
     cat_coords = SkyCoord(catalog["RA"], catalog["DEC"], unit="deg")
@@ -160,7 +159,7 @@ def query_bootstrap(
 
 def query_vo(
     vo_server: str, ra: float, dec: float, radius: float
-) -> pyvo.dal.scs.SCSResults:
+):
     query = pyvo.dal.scs.SCSQuery(vo_server, maxrec=10)
     query["RA"] = ra
     query["DEC"] = dec
