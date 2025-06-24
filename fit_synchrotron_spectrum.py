@@ -35,9 +35,7 @@ class Fitter(ABC):
     def fit_func(self, *args, **kwargs):
         pass
 
-    def fit(
-        self, freq, flux_density, p0, sigma
-    ):
+    def fit(self, freq, flux_density, p0, sigma):
         self.freq_points = len(freq)
         popt, pcov = curve_fit(
             self.fit_func, xdata=freq, ydata=flux_density, p0=p0, sigma=sigma
@@ -130,9 +128,7 @@ def fit_from_NED(ra: float, dec: float, radius: float, outdir: str):
     return fitter
 
 
-def query_vizier(
-    catalogue: str, ra: float, dec: float, radius: float
-):
+def query_vizier(catalogue: str, ra: float, dec: float, radius: float):
     v = Vizier(catalog=catalogue)
     q = v.query_region(f"{ra}, {dec}", radius=radius * u.arcsec, cache=False)
     if q:
@@ -141,9 +137,7 @@ def query_vizier(
         raise RuntimeError("Source not found in requested survey.")
 
 
-def query_bootstrap(
-    catalogue: str, ra: float, dec: float, radius: float
-):
+def query_bootstrap(catalogue: str, ra: float, dec: float, radius: float):
     with fits.open(catalogue) as hdul:
         catalog = astropy.table.Table(hdul[1].data)
     cat_coords = SkyCoord(catalog["RA"], catalog["DEC"], unit="deg")
@@ -157,9 +151,7 @@ def query_bootstrap(
         raise RuntimeError("Source not found in requested survey.")
 
 
-def query_vo(
-    vo_server: str, ra: float, dec: float, radius: float
-):
+def query_vo(vo_server: str, ra: float, dec: float, radius: float):
     query = pyvo.dal.scs.SCSQuery(vo_server, maxrec=10)
     query["RA"] = ra
     query["DEC"] = dec

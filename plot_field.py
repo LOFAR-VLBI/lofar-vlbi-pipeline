@@ -1144,6 +1144,7 @@ def generate_catalogues(
     outdir=".",
     pointing=None,
     fit_spec=False,
+    force=False,
 ):
     # def plugin_main( RA, DEC, **kwargs ):
     #    im_radius = float(kwargs['im_radius'])
@@ -1165,12 +1166,10 @@ def generate_catalogues(
     extreme_file = os.path.join(outdir, "extreme_catalogue.csv")
 
     ## first check for a valid delay_calibrator file
-    if os.path.isfile(delay_cals_file):
-        print("Delay calibrators file {:s} exists! returning.".format(delay_cals_file))
-        choice = input(
-            "Would you like to overwrite catalogues? Press y to cotinue and overwrite, n to exit: "
-        )
-        if choice == "y":
+    if os.path.isfile(lbcs_catalogue) or os.path.isfile(lotss_catalogue):
+        print("Delay calibrators file {:s} already exists!".format(delay_cals_file))
+        if force:
+            print("Forcing overwrite")
             os.remove(delay_cals_file)
             os.remove(lotss_catalogue)
             os.remove(lbcs_catalogue)
@@ -1181,6 +1180,7 @@ def generate_catalogues(
                 print("No LoTSS files")
             pass
         else:
+            print("Returning!")
             return
 
     ## look for or download LBCS
@@ -1541,6 +1541,14 @@ if __name__ == "__main__":
         default=False,
     )
 
+    parser.add_argument(
+        "--force",
+        dest="force",
+        action="store_true",
+        help="Force overwrite of existing csvs",
+        default=False,
+    )
+
     parser.add_argument("--RA", type=float, dest="RA", help="Ptg RA in deg")
     parser.add_argument("--DEC", type=float, dest="DEC", help="Ptg DEC in deg")
     parser.add_argument("--pointing", type=str, dest="pointing", help="Pointing name")
@@ -1576,6 +1584,7 @@ if __name__ == "__main__":
         outdir=args.outdir,
         pointing=args.pointing,
         fit_spec=args.fit_spec,
+        force=args.force
     )
 
 
