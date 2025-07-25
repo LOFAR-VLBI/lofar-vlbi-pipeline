@@ -1159,14 +1159,17 @@ def generate_catalogues(
     ## prepend everything with outdir
     if not os.path.exists(outdir):
         os.mkdir(outdir)
-    lotss_catalogue = os.path.join(outdir, lotss_catalogue)
+    ## if using a user-defined catalogue, don't rename it
+    if lotss_catalogue == 'lotss_catalogue.csv':
+        lotss_catalogue = os.path.join(outdir, lotss_catalogue)
     lbcs_catalogue = os.path.join(outdir, lbcs_catalogue)
     lotss_result_file = os.path.join(outdir, lotss_result_file)
     delay_cals_file = os.path.join(outdir, delay_cals_file)
     extreme_file = os.path.join(outdir, "extreme_catalogue.csv")
 
     ## first check for a valid delay_calibrator file
-    if os.path.isfile(lbcs_catalogue) or os.path.isfile(lotss_catalogue):
+    if os.path.isfile(delay_cals_file):
+    #if os.path.isfile(lbcs_catalogue) or os.path.isfile(lotss_catalogue):
         print("Delay calibrators file {:s} already exists!".format(delay_cals_file))
         if force:
             print("Forcing overwrite")
@@ -1343,7 +1346,7 @@ def generate_catalogues(
             nsrcs = float(len(sources_to_image))
             print(
                 "There are "
-                + str(len(lbcs_catalogue))
+                + str(len(result))
                 + " delay calibrators within "
                 + str(im_radius)
                 + " degrees of the pointing centre"
