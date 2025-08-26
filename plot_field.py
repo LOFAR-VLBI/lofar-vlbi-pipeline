@@ -763,6 +763,10 @@ def convert_cutout(fitsfile):
 
 
 def fit_spectrum(delay_cals_file, outdir):
+    from fit_synchrotron_spectrum import (
+            fit_from_NED,
+            fit_from_trusted_surveys,
+        )
     result = Table.read(delay_cals_file)
     # Empty columns for fitting parameters within delay calibration
     total_flux_column = Column([None] * len(result), name="fit_flux", unit="Jy")
@@ -1384,10 +1388,6 @@ def generate_catalogues(
     )
 
     if fit_spec:
-        from fit_synchrotron_spectrum import (
-            fit_from_NED,
-            fit_from_trusted_surveys,
-        )
         fit_spectrum(delay_cals_file, outdir)
 
     if vlass:
