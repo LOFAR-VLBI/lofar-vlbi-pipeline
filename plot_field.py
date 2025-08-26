@@ -17,10 +17,6 @@ from astropy.io import fits
 from astropy.wcs import WCS
 from requests.adapters import Retry, HTTPAdapter
 from time import sleep
-from fit_synchrotron_spectrum import (
-    fit_from_NED,
-    fit_from_trusted_surveys,
-)
 
 
 def sum_digits(n):
@@ -1387,6 +1383,11 @@ def generate_catalogues(
     )
 
     if fit_spec:
+        from fit_synchrotron_spectrum import (
+            fit_from_NED,
+            fit_from_trusted_surveys,
+        )
+
         fit_spectrum(delay_cals_file, outdir)
 
     if vlass:
