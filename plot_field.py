@@ -28,7 +28,7 @@ def format_skycoord(skycoord: SkyCoord) -> str:
     Returns:
         str: Formatted string in the format "hhmmss.ss+ddmmss.s"
     """
-    ra = skycoord.ra.to_value('h')
+    ra = skycoord.ra.to_value('hourangle')
     dec = skycoord.dec.to_value('deg')
 
     ra_hours = int(ra)
