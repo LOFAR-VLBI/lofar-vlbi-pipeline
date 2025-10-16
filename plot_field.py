@@ -18,7 +18,34 @@ from astropy.wcs import WCS
 from requests.adapters import Retry, HTTPAdapter
 from time import sleep
 
+def format_skycoord(skycoord: SkyCoord) -> str:
+    """
+    Convert an Astropy SkyCoord to a string formatted as "hhmmss.ss+ddmmss.s"
 
+    Arguments:
+        skycoord (astropy.coordinates.SkyCoord): Input coordinate to format.
+
+    Returns:
+        str: Formatted string in the format "hhmmss.ss+ddmmss.s"
+    """
+    ra = skycoord.ra.to_value('h')
+    dec = skycoord.dec.to_value('deg')
+
+    ra_hours = int(ra)
+    ra_minutes = int((ra - ra_hours) * 60)
+    ra_seconds = ((ra - ra_hours) * 60 - ra_minutes) * 60
+
+    dec_degrees = int(dec)
+    dec_arcminutes = int(abs((dec - dec_degrees) * 60))
+    dec_arcseconds = abs(((dec - dec_degrees) * 60 - dec_arcminutes) * 60)
+
+    ra_str = f"ILTJ{ra_hours:02d}{ra_minutes:02d}{ra_seconds:05.2f}"
+
+    dec_sign = '+' if dec >= 0 else '-'
+    dec_degrees = abs(dec_degrees)
+    dec_str = f"{dec_sign}{dec_degrees:02d}{dec_arcminutes:02d}{dec_arcseconds:04.1f}"
+
+    return ra_str + dec_str
 
 def sum_digits(n):
     s = 0
@@ -1249,8 +1276,8 @@ def generate_catalogues(
         seps = Column(separations.deg, name="Radius")
         lbcs_catalogue.add_column(seps)
 
-        ## rename the source_id column
-        lbcs_catalogue.rename_column("Observation", "Source_id")
+        # Create an ILTJhhmmss.ss+ddmmss.s name on-the-fly.
+        lbcs_catalogue["Source_id"] = [format_skycoord(SkyCoord(ra, dec, unit="deg")) for (ra, dec) in zip(lbcs_catalogue["RA"], lbcs_catalogue["DEC"])]
 
         ## add in some dummy data
         Total_flux = Column(
