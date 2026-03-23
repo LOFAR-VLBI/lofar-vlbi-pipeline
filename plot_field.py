@@ -150,7 +150,7 @@ def my_lotss_catalogue(
         tb_final = Table.read(outfile, format="csv")
         if "Source_Name" in tb_final.colnames:
             tb_final.rename_column("Source_Name", "Source_id")
-            tb_final.write(outfile, format="csv")
+            tb_final.write(outfile, format="csv",overwrite=True)
     else:
         print("DOWNLOADING LOTSS Skymodel for the target field")
         print("Radius is", Radius)
@@ -162,6 +162,7 @@ def my_lotss_catalogue(
             # url = 'http://vo.astron.nl/lofartier1/q/cone/scs.xml'
             # HETDEX database.
             # url = 'https://vo.astron.nl/hetdex/lotss-dr1/cone/scs.xml'
+            # url = "https://vo.astron.nl/lotss_dr2/q/src_cone/scs.xml"
             url = "https://vo.astron.nl/lotss_dr2/q/src_cone/scs.xml"
 
             ## query the database
